@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="1.2"</script>
+<script>window.APP_VERSION="1.3"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -297,7 +297,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
     <button class="mode" id="mFriend"><span class="ic" style="background:var(--ok);color:#00261a">F</span><span class="tx"><b>친구 대결</b><span>방 번호로 가족·친구와 같은 문제 대결</span></span></button>
     <div class="sec">혼자 하기</div>
     <button class="mode" id="mInf"><span class="ic" style="background:var(--hot);color:#2b0606">∞</span><span class="tx"><b>무한 러시</b><span>하트 3개 · 판이 5×5 → 8×8로 커져요</span></span><span class="rt" id="infBest"></span></button>
-    <button class="mode" id="mIq"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전</b><span>판 4개 · 목표 12개 · 많이, 빨리 찾을수록 높은 IQ</span></span><span class="rt" id="iqBest"></span></button>
+    <button class="mode" id="mIq"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전</b><span>계산 판 4개 + 별자리 퍼즐 2판 · 빠르고 정확할수록 높은 IQ</span></span><span class="rt" id="iqBest"></span></button>
     <div class="sec">퍼즐 · 시간 제한 없이 천천히</div>
     <button class="mode" id="mStar"><span class="ic" style="background:#ffd84d;color:#5a3a00">★</span><span class="tx"><b>별자리 퍼즐</b><span>길 위 숫자 합 = 별 · 가로세로 같은 숫자 금지</span></span><span class="rt" id="starBest"></span></button>
   </div>
@@ -529,7 +529,8 @@ function afterRound(){
   if(!G)return;
   if(G.mode==='vs'){if(G.me>=G.goal)return finish(true);if(G.op>=G.goal)return finish(false)}
   if(G.mode==='inf'&&G.hp<=0)return offerRevive();
-  if((G.mode==='day'||G.mode==='iq')&&G.stage>=G.total)return finish(true);
+  if(G.mode==='iq'&&G.stage>=G.total)return iqPuzzle(0);
+  if(G.mode==='day'&&G.stage>=G.total)return finish(true);
   if(G.mode==='live')return;
   nextPuzzle();
 }
@@ -697,9 +698,11 @@ function finish(win){
     if(G.forfeit)lines.push(['','상대가 나갔어요']);
   }else if(G.mode==='iq'){
     const fr=G.fr||[],avg=fr.length?fr.reduce((a,b)=>a+b,0)/fr.length:0;
-    G.iq=Math.max(70,Math.min(150,Math.round(75+5*G.solved+15*avg)));const nb=G.iq>(P.iq||0);if(nb)P.iq=G.iq;xp+=20;
+    /* 1.3: 계산 판 12목표(60%) + 별자리 퍼즐 2판(40%) → 70~150 */
+    const pzs=(G.nf||[]),pz=pzs.length?pzs.reduce((a,x)=>a+x.v,0)/IQ_PZ.length:0;
+    G.iq=Math.max(70,Math.min(150,Math.round(70+80*(.52*G.solved/(G.total*K_PER)+.08*avg+.4*pz))));const nb=G.iq>(P.iq||0);if(nb)P.iq=G.iq;xp+=20;
     head=nb&&P.games>0?'IQ 도전 · 새 기록!':'IQ 도전 결과';
-    lines=[['맞힌 목표',G.solved+' / '+G.total*K_PER],['평균 속도',Math.round(avg*100)+'%'],['최고 콤보',G.best],['내 최고 IQ',P.iq]];
+    lines=[['맞힌 목표',G.solved+' / '+G.total*K_PER],['평균 속도',Math.round(avg*100)+'%'],['별자리 퍼즐',(G.nf||[]).filter(x=>x.ok).length+' / '+IQ_PZ.length+(G.nf&&G.nf.length?' ('+G.nf.map(x=>x.ok?Math.round(x.sec)+'초':'실패').join(', ')+')':'')],['최고 콤보',G.best],['내 최고 IQ',P.iq]];
   }
   addXp(xp);save();syncOnline();notiSync();
   const after=lvOf(P.xp);
@@ -989,7 +992,7 @@ window.__appBack=function(){
 /* heat: stop timers + sound when the app is hidden (live matches keep running: the other player is waiting) */
 document.addEventListener('visibilitychange',()=>{
   try{if(document.hidden)ac&&ac.suspend()}catch(e){}
-  if(!G||G.done||G.held||G.mode==='live')return;
+  if(!G||G.done||G.held||G.mode==='live'||G.inPz)return;
   if(document.hidden){
     if(G.live){pauseG();G.paused=1}
     else{clearT();G.paused=2}
@@ -1200,13 +1203,14 @@ function nfBoard(r,n,t){const pk=NF_PACKS[r]||NF_PACKS.sprout;n=Math.max(1,n|0);
 const NF_STAR='<svg viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="nfsg" cx="50%" cy="40%"><stop offset="0" stop-color="#fff2b0"/><stop offset="1" stop-color="#f5b82e"/></radialGradient></defs><path d="M50 4 62 36 96 37 69 58 79 92 50 72 21 92 31 58 4 37 38 36Z" fill="url(#nfsg)"/></svg>';
 const NF_MAXMISS=3,NF_PRICE=20;
 let S=null;
-function nfStart(rid){
-  const r=NF_ROOMS.find(x=>x.id===rid)||NF_ROOMS[0],sp=P.sp[r.id];P.nfRoom=r.id;save();
-  const B=nfBoard(r.id,sp.lv,sp.t);
+function nfStart(rid,iq){
+  const r=NF_ROOMS.find(x=>x.id===rid)||NF_ROOMS[0],sp=P.sp[r.id];if(!iq){P.nfRoom=r.id;save()}
+  const B=iq?nfBoard(r.id,41+Math.floor(Math.random()*5000),0):nfBoard(r.id,sp.lv,sp.t);
   S={r,B,N:B.n,lv:sp.lv,val:B.dig.map((v,i)=>B.given[i]!=null?B.given[i]:0),segOf:{},memo:{},hintCell:{},sel:-1,hist:[],memoMode:false,mist:0,hints:1,undos:1,lit:new Set(),wrong:{},why:null,score:0,scored:{},won:false,over:false,revived:0,newly:[]};
   B.stars.forEach(c=>S.val[c]=0);B.segs.forEach((s,k)=>s.cells.forEach(c=>S.segOf[c]=k));
   B.segs.forEach((s,k)=>{if(nfSegOk(k))S.lit.add(k)});
   show('star');nfLayout();nfDraw();
+  if(iq){S.iq=iq;S.t0=performance.now();nfHud();return}
   if(!P.nfSeen){P.nfSeen=1;save();nfRules()}else say('nfStart');
 }
 function nfSegOk(k){const s=S.B.segs[k];let sum=0;for(const c of s.cells){if(!S.val[c])return false;sum+=S.val[c]}return sum===s.sum}
@@ -1249,7 +1253,7 @@ function nfDraw(){if(!S)return;const {N,B,val}=S,c=100/N,bad=nfConf(),sel=S.sel,
     h+='<div class="nf-cell'+(hl?' hl':'')+'" style="'+st+'" data-i="'+i+'"><div class="nf-dot '+cls+'">'+(val[i]||'')+m+'</div></div>'}
   $('nfBoard').innerHTML=h;$('nfBoard').classList.toggle('done',S.won);nfHud();nfZoom(ss)}
 function nfHud(){const sp=P.sp[S.r.id];
-  $('nfMode').textContent=S.r.emo+' '+S.r.nm+' · '+S.lv+'단계';
+  $('nfMode').textContent=S.iq?'IQ 도전 · 퍼즐 '+S.iq.k+'/'+IQ_PZ.length:S.r.emo+' '+S.r.nm+' · '+S.lv+'단계';
   $('nfHp').innerHTML='♥'.repeat(Math.max(0,NF_MAXMISS-S.mist))+'<span style="opacity:.3">'+'♥'.repeat(Math.min(NF_MAXMISS,S.mist))+'</span>';
   $('nfLit').textContent='★ '+S.lit.size+'/'+S.B.segs.length;
   $('nfMemoB').classList.toggle('on',S.memoMode);$('nfPad').classList.toggle('memoon',S.memoMode);
@@ -1281,9 +1285,9 @@ function nfAfter(){const before=new Set(S.lit);S.lit=new Set();S.B.segs.forEach(
   nfDraw();S.newly=[];
   if(S.lit.size===S.B.segs.length&&bad.size===0&&!S.won){S.won=true;S.sel=-1;nfDraw();setTimeout(nfWin,900)}}
 function nfUndo(){if(!nfCan())return;const h0=S.hist[S.hist.length-1];if(!h0){note('되돌릴 게 없어요');return}
-  if(!h0.memo){if(S.undos<=0)return nfRefill('undos');S.undos--}const h=S.hist.pop();S.val[h.i]=h.v;S.memo[h.i]=h.m;if(h.peers)for(const j in h.peers)S.memo[j]=h.peers[j];S.sel=h.i;sTap();nfAfter()}
+  if(!h0.memo){if(S.undos<=0)return S.iq?note('IQ 도전에서는 되돌리기가 1번이에요'):nfRefill('undos');S.undos--}const h=S.hist.pop();S.val[h.i]=h.v;S.memo[h.i]=h.m;if(h.peers)for(const j in h.peers)S.memo[j]=h.peers[j];S.sel=h.i;sTap();nfAfter()}
 function nfErase(){if(!nfCan())return;const i=S.sel;if(i<0||!nfBlank(i)||S.hintCell[i])return;S.hist.push({i,v:S.val[i],m:(S.memo[i]||[]).slice()});S.val[i]=0;S.memo[i]=[];sTap();nfAfter()}
-function nfHint(){if(!nfCan())return;if(S.hints<=0)return nfRefill('hints');const {B,val}=S;
+function nfHint(){if(!nfCan())return;if(S.hints<=0)return S.iq?note('IQ 도전에서는 힌트가 1번이에요'):nfRefill('hints');const {B,val}=S;
   let t=-1;if(S.sel>=0&&nfBlank(S.sel)&&val[S.sel]!==B.dig[S.sel])t=S.sel;
   if(t<0){let best=-1;B.segs.forEach(s=>{const miss=s.cells.filter(c=>nfBlank(c)&&val[c]!==B.dig[c]);if(miss.length&&(best<0||miss.length<best)){best=miss.length;t=miss[0]}})}
   if(t<0)return;S.hints--;S.hist=S.hist.filter(h=>h.i!==t);S.val[t]=B.dig[t];S.hintCell[t]=1;S.memo[t]=[];S.sel=t;sTap();nfAfter();if(!S.won)note('💡 정답 '+B.dig[t]+'을 넣었어요')}
@@ -1293,7 +1297,7 @@ function nfRefill(k){const nm=k==='hints'?'힌트':'되돌리기';
   modal('<h2>'+nm+' 더 받기</h2><p class="c">판마다 1번은 무료예요. 하나 더 받을까요?</p><div class="row"><button class="btn pri" id="rfAd">광고 보고 받기</button><button class="btn" id="rfSt" '+(P.coins>=NF_PRICE?'':'disabled')+'>★'+NF_PRICE+' 쓰기</button><button class="btn" id="byN">닫기</button></div><p class="c mut">가진 별 ★'+P.coins+'</p>');
   $('byN').onclick=closeModal;$('rfSt').onclick=()=>{if(P.coins<NF_PRICE)return;P.coins-=NF_PRICE;save();S[k]++;closeModal();nfHud()};
   $('rfAd').onclick=()=>rewarded('nf'+k,ok=>{closeModal();if(ok){S[k]++;nfHud()}else note('광고를 불러오지 못했어요')})}
-function nfOut(){if(!S||S.won)return;S.over=true;
+function nfOut(){if(!S||S.won)return;S.over=true;if(S.iq)return iqPzDone(false);
   if(!S.revived){S.revived=1;const free=adsRemoved();
     modal('<h2>하트가 다 떨어졌어요</h2><p class="c">'+(free?'광고 제거 혜택으로 한 번 이어 할 수 있어요.':'짧은 광고를 보면 하트 1개로 이어 할 수 있어요.')+'</p><div class="row"><button class="btn pri" id="rvGo">'+(free?'이어 하기':'광고 보고 이어 하기')+'</button><button class="btn" id="rvNo">그만하기</button></div>');
     const go=()=>{closeModal();S.over=false;S.mist=NF_MAXMISS-1;nfDraw()};
@@ -1302,7 +1306,7 @@ function nfOut(){if(!S||S.won)return;S.over=true;
 function nfLose(){S.over=true;P.games++;save();say('lose',null,1);
   modal('<h2>아쉬워요</h2><p class="c">하트를 다 썼어요. 같은 판으로 다시 해 볼까요?</p><div class="row"><button class="btn pri" id="rAgain">다시 하기</button><button class="btn" id="rHome">홈으로</button></div>');
   const rid=S.r.id;$('rAgain').onclick=()=>{closeModal();maybeInter('nf',()=>nfStart(rid))};$('rHome').onclick=()=>{closeModal();maybeInter('nf',goHome)}}
-function nfWin(){if(!S)return;const sp=P.sp[S.r.id],rid=S.r.id,stars=Math.max(1,3-S.mist),before=lvOf(P.xp);
+function nfWin(){if(!S)return;if(S.iq)return iqPzDone(true);const sp=P.sp[S.r.id],rid=S.r.id,stars=Math.max(1,3-S.mist),before=lvOf(P.xp);
   const xp=Math.round(S.score/10)+10+S.r.d*5,coins=1+S.r.d+stars;
   sp.lv++;sp.clr++;sp.t=0;sp.st+=stars;P.games++;P.wins++;P.coins+=coins;addXp(xp);save();syncOnline();notiSync();sBig();
   const after=lvOf(P.xp),k=NF_ROOMS.findIndex(x=>x.id===rid),nx=NF_ROOMS[k+1],opened=nx&&!UNLOCK()&&sp.clr===nx.need;
@@ -1330,7 +1334,20 @@ $('nfZoom').addEventListener('click',e=>{const t=e.target.closest&&e.target.clos
 $('nfPad').addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-d]');if(t)nfPut(+t.dataset.d)});
 $('nfUndoB').onclick=nfUndo;$('nfEraseB').onclick=nfErase;$('nfHintB').onclick=nfHint;$('nfHowB').onclick=()=>nfRules();
 $('nfMemoB').onclick=()=>{if(!nfCan())return;S.memoMode=!S.memoMode;sTap();nfHud();if(S.memoMode)note('✏️ 메모: 후보 숫자를 작게 적어요')};
-$('nfBack').onclick=nfQuit;$('mStar').onclick=nfRooms;
+$('nfBack').onclick=nfQuit;
+/* IQ 도전 뒷부분: 별자리 퍼즐 2판 (젠다 2026-11-22 "별잇기도 아이큐도전에 포함"). 시간 제한 없이 걸린 시간·틀린 수·힌트로 점수 */
+const IQ_PZ=[{room:'sprout',lim:45},{room:'star',lim:100}];
+function iqPuzzle(k){if(!G||G.mode!=='iq')return;G.inPz=1;G.nf=G.nf||[];const p=IQ_PZ[k];
+  const go=()=>{closeModal();nfStart(p.room,{k:k+1,lim:p.lim})};
+  if(k===0){modal('<h2>이제 별자리 퍼즐 2판!</h2><p class="c">별잇기 숫자 채우기예요. 길 위 숫자 합 = 별 숫자, 가로·세로줄에 같은 숫자 금지.</p><p class="c mut">빨리, 적게 틀릴수록 IQ가 올라가요. 하트 3개를 다 쓰면 그 판은 실패예요.</p><div class="row"><button class="btn pri" id="iqGo">시작</button><button class="btn" id="iqRule">규칙 보기</button></div>');
+    $('iqGo').onclick=go;$('iqRule').onclick=()=>nfRules(go)}
+  else go()}
+function iqPzDone(ok){const sec=(performance.now()-S.t0)/1000,k=S.iq.k,lim=S.iq.lim;
+  const sp=Math.max(0,Math.min(1,1.5-sec/lim)),pen=Math.min(.6,.15*S.mist+.15*(1-S.hints));
+  const v=ok?Math.max(0,(.55+.45*sp)*(1-pen)):0;
+  G.nf.push({ok,sec,v});if(ok){G.score+=S.score;G.solved+=0}
+  ok?sBig():sLose();toast(ok?'별자리 완성!':'퍼즐 실패',ok?'var(--num)':'var(--hot)',ok?Math.round(sec)+'초':'');
+  setTimeout(()=>{if(!G||G.mode!=='iq')return;if(k<IQ_PZ.length)iqPuzzle(k);else{S=null;G.inPz=0;finish(true)}},1300)}$('mStar').onclick=nfRooms;
 Object.assign(KL,{nfStart:['smile|빈 동그라미부터 하나씩 채워 봐요','think|빈칸이 하나뿐인 별을 먼저 찾아봐요','wink|가로줄·세로줄 같은 숫자만 조심!'],
   nfLit:['happy|별 하나 반짝!','excited|켜졌다! 다음 별도!','proud|좋아요, 그 길 맞았어요'],
   nfWrong:['worry|앗, 그 숫자는 아니에요. 확대 줄에 이유가 있어요','think|같은 줄에 이미 있는 숫자는 빼고 생각해 봐요'],
