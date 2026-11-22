@@ -1,0 +1,1 @@
+window.FIREBASE_CONFIG={apiKey:"AIzaSyBWfH30Okhr0zWAEwsHHCKg8gFH-Hu_Od8",authDomain:"jjakkung-fc4b4.firebaseapp.com",databaseURL:"https://jjakkung-fc4b4-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"jjakkung-fc4b4",storageBucket:"jjakkung-fc4b4.firebasestorage.app",messagingSenderId:"317712550989",appId:"1:317712550989:web:6c7e7d54015aab41772004"};
