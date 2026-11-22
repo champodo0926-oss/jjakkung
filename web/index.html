@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="1.8"</script>
+<script>window.APP_VERSION="1.9"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -334,7 +334,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
     <button class="mode" id="mRank"><span class="ic" style="background:var(--num);color:#2a1d00">R</span><span class="tx"><b>랭크전</b><span>실시간 1:1 · 5점 먼저 · 이기면 +25 RP</span></span><span class="rt" id="rankRt"></span></button>
     <button class="mode" id="mFriend"><span class="ic" style="background:var(--ok);color:#00261a">F</span><span class="tx"><b>친구 대결</b><span>방 번호로 가족·친구와 같은 문제 대결</span></span></button>
     <div class="sec">혼자 하기</div>
-    <button class="mode" id="mInf"><span class="ic" style="background:var(--hot);color:#2b0606">∞</span><span class="tx"><b>무한 러시</b><span>하트 3개 · 같은 5×5 판, 갈수록 목표가 어려워져요</span></span><span class="rt" id="infBest"></span></button>
+    <button class="mode" id="mInf"><span class="ic" style="background:var(--hot);color:#2b0606">∞</span><span class="tx"><b>무한 러시</b><span>하트 3개 · 같은 4×4 판, 갈수록 어려워져요</span></span><span class="rt" id="infBest"></span></button>
     <button class="mode" id="mIq"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전 · 계산 대결</b><span>계산 판 4개 · 길 12개 · IQ가 실시간으로 올라가요</span></span><span class="rt" id="iqBest"></span></button>
     <button class="mode" id="mIqS"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전 · 별자리 퍼즐</b><span>퍼즐 3판 · 빠르고 정확할수록 높은 IQ</span></span><span class="rt" id="iqSBest"></span></button>
   </div>
@@ -443,14 +443,14 @@ function addXp(x){const mk=monthKey();if(P.ss.id!==mk)P.ss={id:mk,sc:0};P.ss.sc+
 
 /* ================= AI ================= */
 const AIS=[
-  /* 1.8 (젠다): 계산 판은 모두 5×5 하나. 난이도 = 목표 크기·길에 쓰는 숫자 개수·AI 속도 */
-  {nm:'초보',bot:'꼬마봇',t:[20,32],tg:{min:2,lo:5,hi:30,n:5}},
-  {nm:'보통',bot:'연필봇',t:[14,22],tg:{min:2,lo:10,hi:60,n:5}},
-  {nm:'어려움',bot:'주판봇',t:[11,17],tg:{min:3,lo:10,hi:99,n:5}},
-  {nm:'천재',bot:'알파봇',t:[8,13],tg:{min:3,lo:20,hi:150,n:5}},
-  {nm:'마스터',bot:'제로봇',t:[5,9],tg:{min:4,lo:20,hi:200,n:5}},
+  /* 1.9 (젠다): 계산 판은 모두 4×4 하나. 난이도 = 쓰는 연산·이어야 할 숫자 수·목표 크기·정답 길 수(높은 단계는 3~4개뿐)·AI 속도 */
+  {nm:'초보',bot:'꼬마봇',t:[18,28],tg:{n:4,ops:'+',min:2,lo:5,hi:20}},
+  {nm:'보통',bot:'연필봇',t:[13,20],tg:{n:4,ops:'+×',min:2,lo:8,hi:50}},
+  {nm:'어려움',bot:'주판봇',t:[10,15],tg:{n:4,ops:'+−×',min:3,lo:10,hi:80,wmax:6}},
+  {nm:'천재',bot:'알파봇',t:[7,11],tg:{n:4,ops:'+−×÷',min:3,lo:15,hi:120,wmax:4}},
+  {nm:'마스터',bot:'제로봇',t:[5,8],tg:{n:4,ops:'+−×÷',min:4,lo:20,hi:200,wmax:4}},
 ];
-const LIVE_TG={min:2,lo:8,hi:99,n:5};
+const LIVE_TG={n:4,ops:'+−×',min:2,lo:8,hi:60};
 
 /* ================= RNG + generator ================= */
 function mul(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -459,7 +459,7 @@ let rnd=Math.random;
 const ri=(a,b)=>a+Math.floor(rnd()*(b-a+1));
 function ap(a,op,b){switch(op){case'+':return a+b;case'−':return a-b;case'×':return a*b;case'÷':return(b&&a%b===0)?a/b:null}}
 function nbr(n,i){const r=i/n|0,c=i%n,o=[];if(r)o.push(i-n);if(r<n-1)o.push(i+n);if(c)o.push(i-1);if(c<n-1)o.push(i+1);return o}
-function genBoard(n){const cells=[];for(let i=0;i<n*n;i++){const r=i/n|0,c=i%n;if((r+c)%2===0)cells.push({t:'n',v:ri(1,9)});else{const x=rnd()*9;cells.push({t:'o',v:x<3?'+':x<5?'−':x<8?'×':'÷'})}}return{n,cells}}
+function genBoard(n,ops){const cells=[];for(let i=0;i<n*n;i++){const r=i/n|0,c=i%n;if((r+c)%2===0)cells.push({t:'n',v:ri(1,9)});else if(ops)cells.push({t:'o',v:ops[Math.floor(rnd()*ops.length)]});else{const x=rnd()*9;cells.push({t:'o',v:x<3?'+':x<5?'−':x<8?'×':'÷'})}}return{n,cells}}
 function enumerate(B,maxNums){
   const n=B.n,C=B.cells,map=new Map(),vis=new Uint8Array(n*n),path=[];
   function dfs(i,val,k){
@@ -481,21 +481,27 @@ function pathsFor(B,target,maxNums){const n=B.n,C=B.cells,vis=new Uint8Array(n*n
     if(k>=maxNums)return;for(const o of nbr(n,i)){if(vis[o])continue;vis[o]=1;pth.push(o);for(const m of nbr(n,o)){if(vis[m])continue;const nv=ap(val,C[o].v,C[m].v);if(nv===null||Math.abs(nv)>999)continue;vis[m]=1;pth.push(m);dfs(m,nv,k+1);pth.pop();vis[m]=0}pth.pop();vis[o]=0}}
   for(let i=0;i<n*n;i++)if(C[i].t==='n'){vis[i]=1;pth.push(i);dfs(i,C[i].v,1);pth.pop();vis[i]=0}
   return [...out.entries()].map(([key,p])=>({key,p})).sort((a,b)=>a.p.length-b.p.length)}
+function allWays(B,maxNums){const n=B.n,C=B.cells,vis=new Uint8Array(n*n),pth=[],out=new Map();
+  function dfs(i,val,k){if(k>=2){let e=out.get(val);if(!e)out.set(val,e={min:k,W:new Map()});if(k<e.min)e.min=k;const key=keyOf(pth),ex=e.W.get(key);if(!ex||pth.length<ex.length)e.W.set(key,pth.slice())}
+    if(k>=maxNums)return;for(const o of nbr(n,i)){if(vis[o])continue;vis[o]=1;pth.push(o);for(const m of nbr(n,o)){if(vis[m])continue;const nv=ap(val,C[o].v,C[m].v);if(nv===null||Math.abs(nv)>999)continue;vis[m]=1;pth.push(m);dfs(m,nv,k+1);pth.pop();vis[m]=0}pth.pop();vis[o]=0}}
+  for(let i=0;i<n*n;i++)if(C[i].t==='n'){vis[i]=1;pth.push(i);dfs(i,C[i].v,1);pth.pop();vis[i]=0}
+  return out}
 function slots(v,min,ways,K){return Array.from({length:K},(_,i)=>({v,min,sol:ways[i%ways.length].p,key:null,who:null}))}
 function makeBoard(o,K){
   for(let tries=0;tries<80;tries++){
-    const B=genBoard(o.n),m=enumerate(B,4),cand=[];
-    for(const [v,e] of m)if(v>=o.lo&&v<=o.hi&&e.min>=o.min&&e.min<=o.min+1)cand.push([v,e]);
-    for(let k=0;k<6&&cand.length;k++){const [v,e]=cand.splice(Math.floor(rnd()*cand.length),1)[0];const W=pathsFor(B,v,4);
-      if(W.length>=K)return{B,v,ways:W,T:slots(v,e.min,W,K)}}
+    /* 1.9 (젠다): 계산 판은 4×4. 판의 모든 길을 한 번에 세어서, 정말 K개 이상(높은 단계는 wmax개 이하) 있는 목표만 */
+    const B=genBoard(o.n,o.ops),A=allWays(B,o.n*o.n>>1),cand=[];
+    for(const [v,e] of A){const c=e.W.size;if(v>=o.lo&&v<=o.hi&&e.min>=o.min&&e.min<=o.min+1&&c>=K&&(!o.wmax||c<=o.wmax))cand.push([v,e])}
+    if(cand.length){const [v,e]=cand[Math.floor(rnd()*cand.length)];const W=[...e.W.entries()].map(([key,p])=>({key,p})).sort((a,b)=>a.p.length-b.p.length);return{B,v,ways:W,T:slots(v,e.min,W,K)}}
   }
+  if(o.wmax)return makeBoard(Object.assign({},o,{wmax:0}),K);
   return makeBoard(Object.assign({},o,{min:2,lo:2,hi:999}),K);
 }
 function makePuzzle(o){const b=makeBoard(o,1);return{B:b.B,target:b.T[0].v,min:b.T[0].min,sol:b.T[0].sol}}
-function tutPuzzle(){ /* fixed first board for the guided start */
-  const nums=[4,3,2,6,5, 7,1,8,2,3, 9,4,1];const ops=['+','×','−','+','×','+','−','×','÷','+','×','+'];
-  const n=5,cells=[];let a=0,b=0;for(let i=0;i<25;i++){const r=i/5|0,c=i%5;cells.push((r+c)%2===0?{t:'n',v:nums[a++]}:{t:'o',v:ops[b++]})}
-  const B={n,cells};return{B,v:14,ways:pathsFor(B,14,4),T:[{v:14,min:3,sol:[0,1,2,3,4],key:null,who:null}]};
+function tutPuzzle(){ /* fixed first board for the guided start (1.9: 4×4). 4+3×2, 7×2, 9+5 = 14 */
+  const L=[4,'+',3,'−', '×',5,'×',8, 9,'+',2,'+', '÷',7,'×',2];
+  const cells=L.map(v=>typeof v==='number'?{t:'n',v}:{t:'o',v});const B={n:4,cells};
+  return{B,v:14,ways:[...allWays(B,8).get(14).W.entries()].map(([key,p])=>({key,p})).sort((a,b)=>a.p.length-b.p.length),T:[{v:14,min:3,sol:[0,1,2,6,10],key:null,who:null}]};
 }
 
 /* ================= game state ================= */
@@ -504,7 +510,7 @@ const T={};
 function clearT(){for(const k in T){clearTimeout(T[k]);delete T[k]}}
 function setRnd(seed){rnd=seed==null?Math.random:mul(seed)}
 const DAY_BOARDS=4;
-const IQ_PLAN=[{n:5,min:2,lo:5,hi:50},{n:5,min:3,lo:10,hi:99},{n:5,min:3,lo:20,hi:150},{n:5,min:4,lo:20,hi:200}],IQ_TIME=[50,60,70,90];
+const IQ_PLAN=[{n:4,ops:'+×',min:2,lo:8,hi:50},{n:4,ops:'+−×',min:3,lo:10,hi:80,wmax:6},{n:4,ops:'+−×÷',min:3,lo:15,hi:120,wmax:4},{n:4,ops:'+−×÷',min:4,lo:20,hi:200,wmax:4}],IQ_TIME=[45,55,65,80];
 
 function startTut(){setRnd(null);G={mode:'tut',score:0,combo:0,best:0,solved:0,stage:0};begin(tutPuzzle(),0)}
 function startVs(lv){setRnd(null);G={mode:'vs',lv,ai:AIS[lv],me:0,op:0,goal:5,score:0,combo:0,best:0,solved:0,stage:0};nextPuzzle()}
@@ -512,7 +518,7 @@ function startInf(){setRnd(null);G={mode:'inf',hp:3,score:0,combo:0,best:0,solve
 function startDay(){const d=todayKey();setRnd(hashStr('day'+d));G={mode:'day',score:0,combo:0,best:0,solved:0,stage:0,total:DAY_BOARDS,key:d};nextPuzzle()}
 function startIq(){setRnd(null);G={mode:'iq',score:0,combo:0,best:0,solved:0,stage:0,total:IQ_PLAN.length,fr:[]};nextPuzzle()}
 
-function soloParams(s){return s<3?{n:5,min:2,lo:5,hi:40}:s<6?{n:5,min:2,lo:10,hi:60}:s<10?{n:5,min:3,lo:10,hi:99}:s<16?{n:5,min:3,lo:20,hi:150}:{n:5,min:4,lo:20,hi:200}}
+function soloParams(s){return AIS[s<3?0:s<6?1:s<10?2:s<16?3:4].tg}
 function soloLimit(s,min){return Math.max(16,38-s)+(min-2)*4}
 
 function nextPuzzle(){
@@ -632,7 +638,7 @@ function renderPath(){
   let h;
   if(v===null)h='<span class="h bad">÷는 나누어떨어질 때만 돼요</span>';
   else if(!end)h='<span class="h">다음 숫자로 이어 주세요</span>';
-  else if(v===V&&path.length>=3&&G.pz.T.some(t=>t.key===keyOf(path)))h='<span class="h">이미 찾은 길이에요. 다른 길로 '+V+'을 만들어요!</span>';
+  else if(v===V&&path.length>=3&&G.pz.T.some(t=>t.key===keyOf(path)))h='<span class="h">이미 찾은 길이에요. 다른 길로 '+V+(V%10===0||[1,3,6,7,8].includes(Math.abs(V)%10)?'을':'를')+' 만들어요!</span>';
   else h='<span class="h">지금 합계 <b style="color:var(--fg)">'+v+'</b> · 목표 '+V+'</span>';
   ex.innerHTML='<span class="e">'+toks+(end&&v!==null?' = '+v:'')+'</span>'+h;
 }
@@ -695,7 +701,7 @@ function toast(t,col,sub,sm){const el=$('toast');el.className='toast'+(sm?' sm':
 function note(t){toast(t,'var(--fg)','',1)}
 
 /* ================= first run: guided board ================= */
-function tutHint(){const kids=$('board').children;[0,1,2,3,4].forEach(i=>kids[i].classList.add("tip"));
+function tutHint(){const kids=$('board').children;[0,1,2,6,10].forEach(i=>kids[i].classList.add("tip"));
   $('expr').innerHTML='<span class="e">4 + 3 × 2 = 14</span><span class="h">빛나는 4에서 시작해 + 3 → × 2 로 이어 그려 보세요</span>'}
 function tutDone(){
   P.seen=1;save();
@@ -1464,7 +1470,7 @@ $('coachNext').onclick=()=>{if(!CO)return;sTap();if(CO.k<CO.steps.length-1){CO.k
 $('coachSkip').onclick=()=>{if(!CO)return;const s=CO.skip;coEnd();s&&s()};
 
 /* ---- 브레인 별셈 따라 보기: 고정 판(tutPuzzle)에서 목표 3개 ---- */
-function rushDemoBoard(){const pz=tutPuzzle(),W=pz.ways,a=W.find(w=>w.key===keyOf([0,1,2,3,4]));
+function rushDemoBoard(){const pz=tutPuzzle(),W=pz.ways,a=W.find(w=>w.key===keyOf([0,1,2,6,10]));
   const b=W.find(w=>w.p.length===3&&!w.p.some(i=>a.p.includes(i))),c=W.find(w=>w!==b&&w.p.length<=5&&!w.p.some(i=>a.p.includes(i)||b.p.includes(i)))||W.find(w=>w!==a&&w!==b);
   pz.T=[a,b,c].map(w=>({v:14,min:2,sol:w.p,key:null,who:null}));return pz}
 function rushDemo(replay){
