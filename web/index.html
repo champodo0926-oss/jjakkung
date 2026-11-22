@@ -1,6 +1,6 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<title>브레인 러시</title>
+<title>브레인 별셈</title>
 <style>
 @font-face{font-family:"Jua";src:url(fonts/jua.woff2) format("woff2");font-display:block}
 @font-face{font-family:"Gowun Dodum";src:url(fonts/gowun.woff2) format("woff2");font-display:block}
@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="1.5"</script>
+<script>window.APP_VERSION="1.6"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -290,7 +290,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
 
 <!-- HOME -->
 <section class="scr" id="home">
-  <div class="brand"><h1>브레인 <b>러시</b></h1><button class="gear" id="bSet" aria-label="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg></button></div>
+  <div class="brand"><h1>브레인 <b>별셈</b></h1><button class="gear" id="bSet" aria-label="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg></button></div>
 
   <div class="page" id="pgPlay">
     <div class="prof" id="profBox">
@@ -307,7 +307,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
     <button class="mode" id="mFriend"><span class="ic" style="background:var(--ok);color:#00261a">F</span><span class="tx"><b>친구 대결</b><span>방 번호로 가족·친구와 같은 문제 대결</span></span></button>
     <div class="sec">혼자 하기</div>
     <button class="mode" id="mInf"><span class="ic" style="background:var(--hot);color:#2b0606">∞</span><span class="tx"><b>무한 러시</b><span>하트 3개 · 판이 5×5 → 8×8로 커져요</span></span><span class="rt" id="infBest"></span></button>
-    <button class="mode" id="mIq"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전 · 브레인 러시</b><span>계산 판 4개 · 목표 12개 · IQ가 실시간으로 올라가요</span></span><span class="rt" id="iqBest"></span></button>
+    <button class="mode" id="mIq"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전 · 계산 대결</b><span>계산 판 4개 · 목표 12개 · IQ가 실시간으로 올라가요</span></span><span class="rt" id="iqBest"></span></button>
     <div class="sec">퍼즐 · 시간 제한 없이 천천히</div>
     <button class="mode" id="mStar"><span class="ic" style="background:#ffd84d;color:#5a3a00">★</span><span class="tx"><b>별자리 퍼즐</b><span>길 위 숫자 합 = 별 · 가로세로 같은 숫자 금지</span></span><span class="rt" id="starBest"></span></button>
     <button class="mode" id="mIqS"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전 · 별자리 퍼즐</b><span>퍼즐 3판 · 빠르고 정확할수록 높은 IQ</span></span><span class="rt" id="iqSBest"></span></button>
@@ -728,13 +728,13 @@ function finish(win){
   else win?sWin():sLose();
   const again=G.mode==='live'?'':'<button class="btn '+(extraBtn?'':'pri')+'" id="rAgain">'+(G.mode==='vs'||G.mode==='iq'?'다시 하기':G.mode==='day'?'한 번 더 (기록은 최고만)':'한 번 더')+'</button>';
   const share=G.mode==='day'||G.mode==='iq'?'<button class="btn" id="rShare">'+(G.mode==='iq'?'IQ 자랑하기':'점수 자랑하기')+'</button>':'';
-  modal('<h2>'+head+'</h2><div class="big">'+(G.mode==='iq'?'IQ '+G.iq:G.score)+'</div>'+(G.mode==='iq'?'<p class="c mut">브레인 러시 IQ예요. 재미로 보는 점수예요.</p>':'')+'<div class="kv">'+lines.map(([k,v])=>'<span>'+k+'</span><b>'+v+'</b>').join('')+'<span>얻은 경험치</span><b>+'+xp+' XP</b></div>'+extra+
+  modal('<h2>'+head+'</h2><div class="big">'+(G.mode==='iq'?'IQ '+G.iq:G.score)+'</div>'+(G.mode==='iq'?'<p class="c mut">계산 대결 IQ예요. 재미로 보는 점수예요.</p>':'')+'<div class="kv">'+lines.map(([k,v])=>'<span>'+k+'</span><b>'+v+'</b>').join('')+'<span>얻은 경험치</span><b>+'+xp+' XP</b></div>'+extra+
     '<div class="row">'+extraBtn+again+share+'<button class="btn" id="rHome">홈으로</button></div>');
   const m=G.mode,lv=G.lv;
   const go=fn=>()=>{closeModal();maybeInter(m,fn)};
   if($('rAgain'))$('rAgain').onclick=go(()=>m==='vs'?startVs(lv):m==='inf'?startInf():m==='iq'?startIq():startDay());
   if($('rNext'))$('rNext').onclick=go(()=>startVs(lv+1));
-  const iqv=G.iq;if($('rShare'))$('rShare').onclick=m==='iq'?()=>shareText('브레인 러시 IQ 도전\n내 IQ '+iqv+' (재미로 보는 점수)\n나보다 높게 나올 수 있어요?\nhttps://jjakkung-fc4b4.web.app'):shareDay;
+  const iqv=G.iq;if($('rShare'))$('rShare').onclick=m==='iq'?()=>shareText('브레인 별셈 IQ 도전\n내 IQ '+iqv+' (재미로 보는 점수)\n나보다 높게 나올 수 있어요?\nhttps://jjakkung-fc4b4.web.app'):shareDay;
   $('rHome').onclick=go(goHome);
 }
 
@@ -851,7 +851,7 @@ async function hostFriend(code){
   await joinRoom('F'+code,true,false);
   if(G.started)return;
   modal('<h2>친구를 기다려요</h2><div class="code">'+code+'</div><p class="c mut">친구가 친구 대결 → 이 번호를 넣으면 시작해요</p><div class="row"><button class="btn pri" id="fShare">초대 보내기</button><button class="btn" id="fCancel">취소</button></div>');
-  $('fShare').onclick=()=>shareText('브레인 러시 친구 대결 방 번호: '+code+'\nhttps://jjakkung-fc4b4.web.app/join?code='+code);
+  $('fShare').onclick=()=>shareText('브레인 별셈 친구 대결 방 번호: '+code+'\nhttps://jjakkung-fc4b4.web.app/join?code='+code);
   $('fCancel').onclick=()=>{leaveRoom();G=null;closeModal()};
 }
 window.__appJoin=c=>{if(G&&!G.done)return;closeModal();goHome();if(ONLINE())net().then(ok=>ok&&joinRoom('F'+c,false,false))};
@@ -864,7 +864,7 @@ async function needOnline(){
 function shareText(t){if(APP&&APP.share){try{APP.share(t);return}catch(e){}}
   try{navigator.clipboard.writeText(t).then(()=>note('복사했어요. 친구에게 붙여 넣어 보내세요'),()=>note(t))}catch(e){note(t)}}
 function shareDay(){const k=todayKey(),s=P.day[k];if(!s){note('오늘의 러시를 먼저 해 보세요');return}
-  shareText('브레인 러시 오늘의 러시 '+k+'\n내 점수 '+s+'점 · '+P.streak.n+'일 연속\n같은 문제로 나를 이겨 봐요!\nhttps://jjakkung-fc4b4.web.app')}
+  shareText('브레인 별셈 오늘의 러시 '+k+'\n내 점수 '+s+'점 · '+P.streak.n+'일 연속\n같은 문제로 나를 이겨 봐요!\nhttps://jjakkung-fc4b4.web.app')}
 
 /* ================= screens ================= */
 function show(id){for(const s of document.querySelectorAll('.scr'))s.hidden=s.id!==id;$('tabs').hidden=id!=='home';banner()}
@@ -938,7 +938,7 @@ function settings(){
    '<button class="sr" id="sAds"><span>광고 제거 · 골드 테마 + ★300 선물</span><span class="r">'+(adsRemoved()?'적용됨':billPrice)+'</span></button>'+
    (APP?'<button class="sr" id="sRestore"><span>구매 복원</span><span class="r">›</span></button>':'')+
    '<button class="sr" id="sDemo"><span>게임 방법 따라 보기</span><span class="r">›</span></button>'+
-   '<button class="sr" id="sRules"><span>규칙 다시 보기 (브레인 러시)</span><span class="r">›</span></button>'+
+   '<button class="sr" id="sRules"><span>규칙 다시 보기 (계산 대결)</span><span class="r">›</span></button>'+
    '<button class="sr" id="sWipe"><span>내 기록 지우기</span><span class="r">›</span></button>'+
    (TEST_UNLOCK_ALL?'':'<button class="sr" id="sUnlock"><span>시험용 모두 열기</span><span class="r">'+(P.unlock?'켬':'끔')+'</span></button>')+
    '<a class="sr" style="color:inherit;text-decoration:none" href="https://github.com/champodo0926-oss/jjakkung/blob/main/PRIVACY.md" target="_blank" rel="noopener"><span>개인정보 처리방침</span><span class="r">›</span></a>'+
@@ -1026,7 +1026,7 @@ P.coins=P.coins||0;P.thOwn=P.thOwn||{};P.th=P.th||'night';
 P.cd=Object.assign({on:1,talk:1,look:null,own:{},acc:''},P.cd||{});
 P.bgm=P.bgm==null?1:P.bgm;P.bgmPick=P.bgmPick==null?-1:P.bgmPick;P.deco=P.deco||'';P.decoOwn=P.decoOwn||{};
 
-/* ---------- 테마 (별잇기 6.9 테마를 브레인 러시 색으로) ---------- */
+/* ---------- 테마 (별잇기 6.9 테마를 브레인 별셈 색으로) ---------- */
 const BR_THEMES=[
   {id:'night',n:'밤하늘',d:'남색 밤하늘과 금빛 숫자',price:0,sw:['#10132e','#232862','#ffd166']},
   {id:'dawn',n:'새벽빛',d:'분홍·보라 새벽 하늘, 밝은 화면',price:0,sw:['#f6eefa','#ffffff','#e08a1e']},
@@ -1385,7 +1385,7 @@ function iqSFinish(){const R=IQS.res,iq=iqSLive(),before=lvOf(P.xp),nb=iq>(P.iqS
     '<div class="row"><button class="btn pri" id="rAgain">다시 하기</button><button class="btn" id="rShare">IQ 자랑하기</button><button class="btn" id="rHome">홈으로</button></div>');
   say(nb?'best':'win',null,1);
   $('rAgain').onclick=()=>{closeModal();maybeInter('nf',startIqS)};$('rHome').onclick=()=>{closeModal();maybeInter('nf',goHome)};
-  $('rShare').onclick=()=>shareText('브레인 러시 IQ 도전 · 별자리 퍼즐\n내 IQ '+iq+' (재미로 보는 점수)\n나보다 높게 나올 수 있어요?\nhttps://jjakkung-fc4b4.web.app')}
+  $('rShare').onclick=()=>shareText('브레인 별셈 IQ 도전 · 별자리 퍼즐\n내 IQ '+iq+' (재미로 보는 점수)\n나보다 높게 나올 수 있어요?\nhttps://jjakkung-fc4b4.web.app')}
 const _gh5=goHome;goHome=function(){IQS=null;return _gh5.apply(this,arguments)};
 $('mIqS').onclick=startIqS;
 $('mStar').onclick=nfRooms;
@@ -1412,7 +1412,7 @@ function coEnd(){coClear();$('coach').hidden=true;CO=null}
 $('coachNext').onclick=()=>{if(!CO)return;sTap();if(CO.k<CO.steps.length-1){CO.k++;coShow()}else{const d=CO.done;coEnd();d&&d()}};
 $('coachSkip').onclick=()=>{if(!CO)return;const s=CO.skip;coEnd();s&&s()};
 
-/* ---- 브레인 러시 따라 보기: 고정 판(tutPuzzle)에서 목표 3개 ---- */
+/* ---- 브레인 별셈 따라 보기: 고정 판(tutPuzzle)에서 목표 3개 ---- */
 function rushDemoBoard(){const pz=tutPuzzle();const m=enumerate(pz.B,4),c=[];
   for(const [v,e] of m)if(v!==14&&e.min===2&&v>=5&&!e.path.some(i=>i<=4))c.push({v,min:2,sol:e.path,who:null});
   c.sort((a,b)=>a.v-b.v);const t1=c[0],t2=c.find(x=>!x.sol.some(i=>t1.sol.includes(i)))||c[1];
@@ -1424,7 +1424,7 @@ function rushDemo(replay){
   const draw=(p,from,gap,then)=>{for(let k=from;k<p.length;k++)coAt(450+(k-from)*gap,()=>{path=p.slice(0,k+1);sTap();renderPath()});coAt(450+(p.length-from)*gap+150,then||(()=>{}))};
   const got=(t)=>{t.who='me';const kids=$('board').children;for(const i of t.sol)kids[i].classList.add('win');path=[];sWin();renderHud();renderPath();const C=G.pz.B.cells;$('expr').innerHTML='<span class="e" style="color:var(--ok)">'+t.sol.map(i=>C[i].v).join(' ')+' = '+t.v+'</span><span class="h">정답! 목표에 줄이 그어져요</span>';toast('+'+(100+40*((t.sol.length+1)/2-2)),'var(--num)')};
   coStart([
-    {t:'<b>브레인 러시</b>에 온 걸 환영해요! 이게 판이에요. <b style="color:var(--num)">숫자 칸</b>과 <b style="color:var(--op)">연산 칸(+ − × ÷)</b>이 번갈아 있어요.',ex:'happy',spot:'bwrap',run:()=>reset()},
+    {t:'<b>브레인 별셈</b>에 온 걸 환영해요! 이게 판이에요. <b style="color:var(--num)">숫자 칸</b>과 <b style="color:var(--op)">연산 칸(+ − × ÷)</b>이 번갈아 있어요.',ex:'happy',spot:'bwrap',run:()=>reset()},
     {t:'위에 <b style="color:var(--num)">목표 숫자가 3개</b> 있어요. 판에서 이어 그려 이 숫자를 만들면 돼요. 아무거나 먼저!',ex:'excited',spot:'tgt',run:()=>reset()},
     {t:'숫자에서 시작해 <b>옆 칸(위·아래·왼쪽·오른쪽)</b>으로 이어 그려요. 보세요, <b>4 + 3</b> = 7!',ex:'think',spot:'expr',run:()=>{reset();draw(tA.sol.slice(0,3),0,600)}},
     {t:'계산은 <b>앞에서부터 차례로</b>, 계산기처럼요. 이어서 <b>× 2</b> 하면 7 × 2 = <b style="color:var(--num)">14</b>. 목표가 되는 순간 바로 정답이에요!',ex:'proud',spot:'expr',run:()=>{reset();path=tA.sol.slice(0,3);renderPath();draw(tA.sol,3,600,()=>got(tA))}},
