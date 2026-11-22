@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="1.3"</script>
+<script>window.APP_VERSION="1.4"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -275,6 +275,16 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
 .nf-ex i.s{background:#1b2350;color:#ffd24a;border-color:#f5c542;border-radius:9px}
 .nf-ex i.b{background:#e9e4fb;color:#1658c4;border-color:#b9aef0}
 .nf-ex span{width:100%;text-align:center;font-size:13px;color:var(--mute)}
+.coach{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:28;width:min(calc(100vw - 24px),440px);background:var(--panel2);border:2px solid var(--num);border-radius:18px;padding:10px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
+.coach .cx{display:flex;gap:10px;align-items:flex-start}
+.coach .cx .kong-f{width:44px;height:44px}
+.coach p{margin:0;font-size:14.5px;line-height:1.5;flex:1}
+.coach .cr{display:flex;gap:8px;align-items:center}
+.coach .cd{flex:1;display:flex;gap:5px}
+.coach .cd i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.coach .cd i.on{background:var(--num)}
+.coach .btn{padding:8px 14px;font-size:15px}
+.spot{outline:3px solid var(--num);outline-offset:4px;border-radius:12px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
@@ -359,6 +369,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
   <div class="nf-tools"><button id="nfUndoB"><span class="bd" id="nfUndoN"></span><b>↶</b>되돌리기</button><button id="nfEraseB"><b>⌫</b>지우기</button><button id="nfMemoB"><b>✏</b>메모</button><button id="nfHintB"><span class="bd" id="nfHintN"></span><b>💡</b>힌트</button><button id="nfHowB"><b>?</b>규칙</button></div>
 </section>
 <div class="ksay" id="kongSay"></div>
+<div class="coach" id="coach" hidden><div class="cx"><span class="kong-f sm" id="kongC"></span><p id="coachTx"></p></div><div class="cr"><span class="cd" id="coachDots"></span><button class="btn" id="coachSkip">건너뛰기</button><button class="btn pri" id="coachNext">다음</button></div></div>
 <div id="deco" aria-hidden="true"></div>
 
 <div class="toast" id="toast"></div>
@@ -635,11 +646,11 @@ $('bClear').onclick=()=>{if(G&&G.live){path=[];renderPath()}};
 /* ================= HUD ================= */
 function renderHud(){
   const m=G.mode,vs=m==='vs'||m==='live';
-  $('gMode').textContent=m==='vs'?'AI 대결 · '+G.ai.nm:m==='live'?(G.ranked?'랭크전':'친구 대결'):m==='inf'?'무한 러시 · '+(G.stage+1)+'판':m==='day'?'오늘의 러시 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='iq'?'IQ 도전 · '+Math.min(G.stage+1,G.total)+'/'+G.total:'첫 문제';
+  $('gMode').textContent=m==='vs'?'AI 대결 · '+G.ai.nm:m==='live'?(G.ranked?'랭크전':'친구 대결'):m==='inf'?'무한 러시 · '+(G.stage+1)+'판':m==='day'?'오늘의 러시 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='iq'?'IQ 도전 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='demo'?'게임 방법':'첫 문제';
   $('gHp').textContent=m==='inf'?'♥'.repeat(Math.max(0,G.hp))+'♡'.repeat(Math.max(0,3-G.hp)):'';
   $('gSc').textContent=G.score;
   $('vsBox').querySelectorAll('.side,.vsx').forEach(x=>x.hidden=!vs);
-  $('vsBox').hidden=m==='tut';
+  $('vsBox').hidden=m==='tut'||m==='demo';
   $('fuse').className='fuse '+(m==='vs'?'fa':'ft');
   if(vs){const goal=G.goal;$('meNm').textContent=P.nick;$('opNm').textContent=m==='vs'?G.ai.bot:(G.opNick||'상대');
     $('pipMe').innerHTML=Array.from({length:goal},(_,k)=>'<i class="'+(k<G.me?'me':'')+'"></i>').join('');
@@ -655,9 +666,13 @@ function tutHint(){const kids=$('board').children;[0,1,2,3,4].forEach(i=>kids[i]
   $('expr').innerHTML='<span class="e">4 + 3 × 2 = 14</span><span class="h">빛나는 4에서 시작해 + 3 → × 2 로 이어 그려 보세요</span>'}
 function tutDone(){
   P.seen=1;save();
-  modal('<h2>잘했어요!</h2><p class="c">4 + 3 = 7, 7 × 2 = 14. 이게 전부예요.<br>이제 진짜 상대와 누가 빨리 찾는지 겨뤄요.</p><div class="row"><button class="btn pri" id="tGo">꼬마봇과 대결</button><button class="btn" id="tHome">홈으로</button></div>');
+  const learn=!P.nfDemo;
+  modal('<h2>잘했어요!</h2><p class="c">4 + 3 = 7, 7 × 2 = 14. 이게 전부예요.<br>'+(learn?'하나 더! 별잇기의 <b>별자리 퍼즐</b>도 같이 들어 있어요.':'이제 진짜 상대와 누가 빨리 찾는지 겨뤄요.')+'</p><div class="row">'+(learn?'<button class="btn pri" id="tStar">별자리 퍼즐 배우기</button><button class="btn" id="tGo">꼬마봇과 대결</button>':'<button class="btn pri" id="tGo">꼬마봇과 대결</button>')+'<button class="btn" id="tHome">홈으로</button></div>');
   $('tGo').onclick=()=>{closeModal();startVs(0)};$('tHome').onclick=()=>{closeModal();goHome()};
+  if($('tStar'))$('tStar').onclick=()=>{closeModal();G=null;starDemo(()=>{goHome();modal('<h2>준비 끝!</h2><p class="c">별콩이가 응원할게요. 무엇부터 해 볼까요?</p><div class="row"><button class="btn pri" id="tGo2">꼬마봇과 대결</button><button class="btn" id="tPz">별자리 퍼즐</button><button class="btn" id="tHome">홈으로</button></div>');
+    $('tGo2').onclick=()=>{closeModal();startVs(0)};$('tPz').onclick=()=>{closeModal();nfStart('sprout')};$('tHome').onclick=closeModal})};
 }
+
 
 /* ================= finish + XP ================= */
 function offerRevive(){
@@ -922,6 +937,7 @@ function settings(){
    (APP&&APP.setNotif?'<button class="sr" id="sNoti"><span>하루 한 번 알림 (저녁 7시 30분)</span><span class="r">'+(nOn?'켬':'끔')+'</span></button>':'')+
    '<button class="sr" id="sAds"><span>광고 제거 · 골드 테마 + ★300 선물</span><span class="r">'+(adsRemoved()?'적용됨':billPrice)+'</span></button>'+
    (APP?'<button class="sr" id="sRestore"><span>구매 복원</span><span class="r">›</span></button>':'')+
+   '<button class="sr" id="sDemo"><span>게임 방법 따라 보기</span><span class="r">›</span></button>'+
    '<button class="sr" id="sRules"><span>규칙 다시 보기 (브레인 러시)</span><span class="r">›</span></button>'+
    '<button class="sr" id="sWipe"><span>내 기록 지우기</span><span class="r">›</span></button>'+
    (TEST_UNLOCK_ALL?'':'<button class="sr" id="sUnlock"><span>시험용 모두 열기</span><span class="r">'+(P.unlock?'켬':'끔')+'</span></button>')+
@@ -938,6 +954,7 @@ function settings(){
   $('sAds').onclick=()=>{if(adsRemoved())return;if(APP&&APP.buyRemoveAds){try{APP.buyRemoveAds()}catch(e){}}else note('앱에서 살 수 있어요')};
   if($('sRestore'))$('sRestore').onclick=()=>{try{APP.restorePurchases()}catch(e){}};
   $('sRules').onclick=rules;
+  $('sDemo').onclick=()=>{closeModal();rushDemo(true)};
   if($('sUnlock'))$('sUnlock').onclick=()=>{P.unlock=P.unlock?0:1;save();settings()};
   $('sWipe').onclick=()=>{modal('<h2>기록을 모두 지울까요?</h2><p class="c">레벨, 칭호, 점수, 출석이 모두 사라지고 되돌릴 수 없어요. 광고 제거 구매는 남아요.</p><div class="row"><button class="btn hot" id="wY">지우기</button><button class="btn" id="wN">취소</button></div>');
     $('wN').onclick=settings;$('wY').onclick=async()=>{const keep={adsOff:P.adsOff,snd:P.snd,vib:P.vib,seen:1};try{localStorage.removeItem(KEY)}catch(e){}
@@ -992,7 +1009,7 @@ window.__appBack=function(){
 /* heat: stop timers + sound when the app is hidden (live matches keep running: the other player is waiting) */
 document.addEventListener('visibilitychange',()=>{
   try{if(document.hidden)ac&&ac.suspend()}catch(e){}
-  if(!G||G.done||G.held||G.mode==='live'||G.inPz)return;
+  if(!G||G.done||G.held||G.mode==='live'||G.inPz||G.mode==='demo')return;
   if(document.hidden){
     if(G.live){pauseG();G.paused=1}
     else{clearT();G.paused=2}
@@ -1097,7 +1114,7 @@ function homeLine(){
 
 /* 게임 장면에 별콩이 말 붙이기 */
 const _begin=begin;begin=function(pz,dur){const first=G&&(G.solved===0&&!G.saidStart);const r=_begin.apply(this,arguments);
-  if(first&&G.mode!=='tut'){G.saidStart=1;say(G.mode==='live'?'startLive':'start')}else kongFace('think');return r};
+  if(first&&G.mode!=='tut'&&G.mode!=='demo'){G.saidStart=1;say(G.mode==='live'?'startLive':'start')}else kongFace('think');return r};
 const _solved=solved;solved=function(){const m=G.mode;const r=_solved.apply(this,arguments);
   if(!G||m==='tut'||G.done)return r;
   if(m==='live'){kongFace('happy');return r}
@@ -1204,6 +1221,7 @@ const NF_STAR='<svg viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradie
 const NF_MAXMISS=3,NF_PRICE=20;
 let S=null;
 function nfStart(rid,iq){
+  if(!iq&&!P.nfDemo)return starDemo(()=>nfStart(rid));
   const r=NF_ROOMS.find(x=>x.id===rid)||NF_ROOMS[0],sp=P.sp[r.id];if(!iq){P.nfRoom=r.id;save()}
   const B=iq?nfBoard(r.id,41+Math.floor(Math.random()*5000),0):nfBoard(r.id,sp.lv,sp.t);
   S={r,B,N:B.n,lv:sp.lv,val:B.dig.map((v,i)=>B.given[i]!=null?B.given[i]:0),segOf:{},memo:{},hintCell:{},sel:-1,hist:[],memoMode:false,mist:0,hints:1,undos:1,lit:new Set(),wrong:{},why:null,score:0,scored:{},won:false,over:false,revived:0,newly:[]};
@@ -1269,7 +1287,7 @@ function nfZoom(ss){const z=$('nfZoom');
   const wy=S.why&&S.wrong[S.why.i]&&val[S.why.i]&&seg.cells.includes(S.why.i)?S.why.t:'';
   if(wy)h+='<div class="zwhy">✕ '+wy+'</div>';else{const s=nfSeg(ss);h+='<div class="zsum">'+(s.ok?'맞았어요!':'지금 합 '+s.sum+' · 별 '+seg.sum)+'</div>'}
   z.innerHTML=h}
-function nfCan(){return S&&!S.won&&!S.over&&$('ov').hidden}
+function nfCan(){return S&&!S.demo&&!S.won&&!S.over&&$('ov').hidden}
 function nfTap(i){if(!nfCan())return;S.sel=(S.sel===i&&S.B.given[i]==null)?-1:i;sTap();nfDraw()}
 function nfPut(d){if(!nfCan())return;const i=S.sel;if(i<0||!nfBlank(i)||S.hintCell[i]){note('먼저 빈 동그라미를 눌러 주세요');return}
   if(S.memoMode){const m=S.memo[i]||[];S.hist.push({i,v:S.val[i],m:m.slice(),memo:1});S.memo[i]=m.includes(d)?m.filter(x=>x!==d):m.concat(d);sTap();nfDraw();return}
@@ -1323,8 +1341,8 @@ function nfRules(then){modal('<h2>별자리 퍼즐</h2><ol class="nf-rules"><li>
 function nfRooms(){
   modal('<h2>별자리 퍼즐</h2><p class="c mut">별잇기의 숫자 채우기예요. 시간 제한 없이 천천히!</p><div class="lb">'+NF_ROOMS.map((r,k)=>{const sp=P.sp[r.id],open=nfRoomOpen(k);
     return '<button class="mode'+(open?'':' lock')+'" data-room="'+r.id+'" data-k="'+k+'" style="padding:9px 12px'+(open?'':';opacity:.5')+'"><span class="ic" style="background:var(--panel2);font-size:22px">'+r.emo+'</span><span class="tx"><b>'+r.nm+'</b><span>'+r.n+'×'+r.n+' 판 · 숫자 1~'+r.n+'</span></span><span class="rt">'+(open?sp.lv+'단계<br><span class="mut">★'+sp.st+'</span>':NF_ROOMS[k-1].nm+'<br><span class="mut">'+r.need+'판 깨면</span>')+'</span></button>'}).join('')+
-    '</div><div class="row"><button class="btn" id="nfHow">규칙 보기</button><button class="btn" id="byN">닫기</button></div>');
-  $('byN').onclick=closeModal;$('nfHow').onclick=()=>nfRules(nfRooms);
+    '</div><div class="row"><button class="btn" id="nfDemoB">따라 보기</button><button class="btn" id="nfHow">규칙 보기</button><button class="btn" id="byN">닫기</button></div>');
+  $('byN').onclick=closeModal;$('nfDemoB').onclick=()=>{closeModal();starDemo(()=>{goHome();nfRooms()})};$('nfHow').onclick=()=>nfRules(nfRooms);
   $('ovc').querySelectorAll('[data-room]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k;if(!nfRoomOpen(k)){note(NF_ROOMS[k-1].nm+'에서 '+NF_ROOMS[k].need+'판 깨면 열려요');return}closeModal();nfStart(b.dataset.room)})}
 function nfQuit(){if(!S||S.won||S.over)return goHome();
   modal('<h2>그만할까요?</h2><p class="c">이 판은 다음에 처음부터 다시 해요.</p><div class="row"><button class="btn pri" id="qNo">계속하기</button><button class="btn" id="qYes">그만하기</button></div>');
@@ -1356,10 +1374,75 @@ const _rp2=renderPlay;renderPlay=function(){const r=_rp2.apply(this,arguments);c
 const _gh2=goHome;goHome=function(){S=null;return _gh2.apply(this,arguments)};
 const _ab2=window.__appBack;window.__appBack=function(){if(S&&!$('star').hidden&&$('ov').hidden){nfQuit();return true}return _ab2()};
 window.addEventListener('resize',()=>{if(S&&!$('star').hidden){nfLayout();nfDraw()}});
+/* ================= 1.4 처음 안내: 게임 장면을 차근차근 보여주기 (젠다 2026-11-22) =================
+   판이 저절로 한 칸씩 움직이고, 아래 별콩이 카드가 단계마다 설명해요. 단계마다 움직임은 한 번만 (발열). */
+let CO=null;const coT=[];
+function coClear(){while(coT.length)clearTimeout(coT.pop());document.querySelectorAll('.spot').forEach(e=>e.classList.remove('spot'))}
+function coAt(ms,f){coT.push(setTimeout(()=>{if(CO)f()},ms))}
+function coShow(){const st=CO.steps[CO.k];coClear();$('coach').hidden=false;
+  $('coachTx').innerHTML=st.t;$('coachDots').innerHTML=CO.steps.map((_,i)=>'<i class="'+(i===CO.k?'on':'')+'"></i>').join('');
+  $('coachNext').textContent=st.btn||'다음';kongFace(st.ex||'smile');
+  if(st.spot){const e=typeof st.spot==='function'?st.spot():$(st.spot);if(e)e.classList.add('spot')}
+  st.run&&st.run()}
+function coStart(steps,done,skip){CO={steps,k:0,done,skip};kongRedraw();coShow()}
+function coEnd(){coClear();$('coach').hidden=true;CO=null}
+$('coachNext').onclick=()=>{if(!CO)return;sTap();if(CO.k<CO.steps.length-1){CO.k++;coShow()}else{const d=CO.done;coEnd();d&&d()}};
+$('coachSkip').onclick=()=>{if(!CO)return;const s=CO.skip;coEnd();s&&s()};
+
+/* ---- 브레인 러시 따라 보기: 고정 판(tutPuzzle)에서 목표 3개 ---- */
+function rushDemoBoard(){const pz=tutPuzzle();const m=enumerate(pz.B,4),c=[];
+  for(const [v,e] of m)if(v!==14&&e.min===2&&v>=5&&!e.path.some(i=>i<=4))c.push({v,min:2,sol:e.path,who:null});
+  c.sort((a,b)=>a.v-b.v);const t1=c[0],t2=c.find(x=>!x.sol.some(i=>t1.sol.includes(i)))||c[1];
+  pz.T=[pz.T[0],t1,t2].sort((a,b)=>a.v-b.v);return pz}
+function rushDemo(replay){
+  setRnd(null);G={mode:'demo',score:0,combo:0,best:0,solved:0,stage:0};const pz=rushDemoBoard();begin(pz,0);G.live=false;
+  const T3=G.pz.T,tA=T3.find(t=>t.v===14),oth=T3.filter(t=>t!==tA),tB=oth[0],tC=oth[1];
+  const reset=(who)=>{clearTimeout(T.fl);delete T.fl;T3.forEach(t=>t.who=null);(who||[]).forEach(([t,w])=>t.who=w);path=[];renderHud();renderPath()};
+  const draw=(p,from,gap,then)=>{for(let k=from;k<p.length;k++)coAt(450+(k-from)*gap,()=>{path=p.slice(0,k+1);sTap();renderPath()});coAt(450+(p.length-from)*gap+150,then||(()=>{}))};
+  const got=(t)=>{t.who='me';const kids=$('board').children;for(const i of t.sol)kids[i].classList.add('win');path=[];sWin();renderHud();renderPath();const C=G.pz.B.cells;$('expr').innerHTML='<span class="e" style="color:var(--ok)">'+t.sol.map(i=>C[i].v).join(' ')+' = '+t.v+'</span><span class="h">정답! 목표에 줄이 그어져요</span>';toast('+'+(100+40*((t.sol.length+1)/2-2)),'var(--num)')};
+  coStart([
+    {t:'<b>브레인 러시</b>에 온 걸 환영해요! 이게 판이에요. <b style="color:var(--num)">숫자 칸</b>과 <b style="color:var(--op)">연산 칸(+ − × ÷)</b>이 번갈아 있어요.',ex:'happy',spot:'bwrap',run:()=>reset()},
+    {t:'위에 <b style="color:var(--num)">목표 숫자가 3개</b> 있어요. 판에서 이어 그려 이 숫자를 만들면 돼요. 아무거나 먼저!',ex:'excited',spot:'tgt',run:()=>reset()},
+    {t:'숫자에서 시작해 <b>옆 칸(위·아래·왼쪽·오른쪽)</b>으로 이어 그려요. 보세요, <b>4 + 3</b> = 7!',ex:'think',spot:'expr',run:()=>{reset();draw(tA.sol.slice(0,3),0,600)}},
+    {t:'계산은 <b>앞에서부터 차례로</b>, 계산기처럼요. 이어서 <b>× 2</b> 하면 7 × 2 = <b style="color:var(--num)">14</b>. 목표가 되는 순간 바로 정답이에요!',ex:'proud',spot:'expr',run:()=>{reset();path=tA.sol.slice(0,3);renderPath();draw(tA.sol,3,600,()=>got(tA))}},
+    {t:'한 판에서 다른 목표도 찾아요. 이번엔 <b style="color:var(--num)">'+tB.v+'</b>! 한 칸은 한 번만 지나가고, ÷는 나누어떨어질 때만 돼요.',ex:'wink',spot:'tgt',run:()=>{reset([[tA,'me']]);draw(tB.sol,0,550,()=>got(tB))}},
+    {t:'AI 대결·랭크전에서는 <b style="color:var(--hot)">상대도 같은 판</b>에서 찾아요. 빨간 길은 상대가 먼저 가져간 목표예요. <b>5점</b> 먼저 내면 승리! 빨리, 연속으로(콤보) 맞힐수록 점수가 커요.',ex:'surprise',spot:'tgt',run:()=>{reset([[tA,'me'],[tB,'me']]);coAt(500,()=>{tC.who='op';sLose();renderHud();flashOp(tC.sol);toast('상대 득점','var(--hot)',String(tC.v))})}},
+    {t:'이제 직접 해 보세요! <b>4</b>에서 시작해 <b>+ 3 × 2</b>로 <b style="color:var(--num)">14</b>를 만들어요.',ex:'excited',btn:'직접 해 보기',run:()=>reset([[tA,'me'],[tB,'me'],[tC,'op']])}
+  ],()=>{startTut()},()=>{if(replay){goHome();return}P.seen=1;save();goHome()});
+}
+
+/* ---- 별자리 퍼즐 따라 보기: 새싹방 1단계 판 ---- */
+function starDemo(then){
+  const r=NF_ROOMS[0],B=nfBoard('sprout',1,0);
+  const base=()=>{S={r,B,N:B.n,lv:1,demo:1,val:B.dig.map((v,i)=>B.given[i]!=null?B.given[i]:0),segOf:{},memo:{},hintCell:{},sel:-1,hist:[],memoMode:false,mist:0,hints:1,undos:1,lit:new Set(),wrong:{},why:null,score:0,scored:{},won:false,over:false,revived:0,newly:[]};
+    B.stars.forEach(c=>S.val[c]=0);B.segs.forEach((s,k)=>s.cells.forEach(c=>S.segOf[c]=k));B.segs.forEach((s,k)=>{if(nfSegOk(k))S.lit.add(k)})};
+  base();show('star');nfLayout();nfDraw();$('nfMode').textContent='별자리 퍼즐 · 따라 보기';
+  const k0=B.segs.findIndex(s=>s.cells.some(c=>nfBlank(c))),seg=B.segs[k0],blanks=seg.cells.filter(c=>nfBlank(c));
+  /* 같은 줄 숫자 예: 다른 구간 빈칸 j에, 같은 가로·세로줄에 이미 있는 숫자 */
+  let cj=-1,cd=0;const N=B.n;
+  for(let j=0;j<N*N&&cj<0;j++){if(!nfBlank(j)||seg.cells.includes(j))continue;const r0=(j/N)|0,c0=j%N;
+    for(let k=0;k<N;k++){const v=B.given[r0*N+k]!=null?B.given[r0*N+k]:B.given[k*N+c0];if(v&&v!==B.dig[j]){cj=j;cd=v;break}}}
+  const fill=()=>{blanks.forEach(c=>S.val[c]=B.dig[c]);S.lit=new Set();B.segs.forEach((s,k)=>{if(nfSegOk(k))S.lit.add(k)})};
+  const redraw=()=>{nfDraw();$('nfMode').textContent='별자리 퍼즐 · 따라 보기'};
+  coStart([
+    {t:'이번엔 <b>별자리 퍼즐</b>(별잇기)이에요. <b>길은 미리 그려져 있어요.</b> 작은 점에서 출발해 선을 따라 별까지 가요.',ex:'happy',spot:'nfBoard',run:()=>{base();redraw()}},
+    {t:'빈 동그라미를 누르면 그 칸이 가는 길이 위에 크게 보여요. <b>앞 별부터 이 별까지 숫자를 더하면 별 숫자</b>가 돼야 해요.',ex:'think',spot:'nfZoom',run:()=>{base();S.sel=blanks[0];redraw()}},
+    {t:'칸을 고르고 <b>아래 숫자</b>를 누르면 들어가요. 합이 맞으면 금빛 선이 그려지고 <b style="color:var(--num)">별이 반짝 켜져요!</b>',ex:'excited',spot:'nfPad',run:()=>{base();S.sel=blanks[0];redraw();
+      blanks.forEach((c,k)=>coAt(700+k*800,()=>{S.sel=c;S.val[c]=B.dig[c];sTap();const pad=$('nfPad').children[B.dig[c]-1];pad&&pad.classList.add('spot');coAt(350,()=>pad&&pad.classList.remove('spot'));
+        if(k===blanks.length-1){S.newly=[k0];S.lit.add(k0);sWin()}redraw();S.newly=[]}))}},
+    {t:'스도쿠처럼 <b>가로줄·세로줄에 같은 숫자</b>는 못 써요. 틀리면 빨갛게 되고 <b style="color:var(--hot)">하트 ♥</b>가 하나 줄어요. 하트는 3개예요.',ex:'worry',spot:'nfZoom',run:()=>{base();fill();redraw();
+      if(cj>=0)coAt(600,()=>{S.sel=cj;S.val[cj]=cd;S.wrong[cj]=1;S.why={i:cj,t:nfWhy(cj,cd)};sLose();redraw();$('nfHp').innerHTML='♥♥<span style="opacity:.3">♥</span>'})}},
+    {t:'헷갈리면 <b>✏ 메모</b>로 후보를 적고, 막히면 <b>💡 힌트</b>! 모든 별이 켜지면 <b style="color:var(--num)">별자리 완성</b>이에요. 시간 제한은 없어요.',ex:'love',spot:()=>document.querySelector('.nf-tools'),btn:'직접 해 보기',run:()=>{base();fill();redraw()}}
+  ],
+  ()=>{P.nfDemo=1;P.nfSeen=1;save();S=null;then?then():nfStart('sprout')},()=>{P.nfDemo=1;P.nfSeen=1;save();S=null;goHome()});
+}
+
+const _gh4=goHome;goHome=function(){if(CO)coEnd();return _gh4.apply(this,arguments)};
+const _ab4=window.__appBack;window.__appBack=function(){if(CO&&$('ov').hidden){$('coachSkip').click();return true}return _ab4()};
 
 /* ================= boot ================= */
 applyTheme();show('home');tab('Play');kongShow();
-if(P.seen){homeLine();maybeAskNoti()}else startTut();
+if(P.seen){homeLine();maybeAskNoti()}else rushDemo();
 if(APP){notiSync();setTimeout(()=>{if(adsRemoved()&&!P.adsOff){P.adsOff=1;save()}},2000)}
 syncOnline();
 </script>
