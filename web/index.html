@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="1.7"</script>
+<script>window.APP_VERSION="1.8"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -67,6 +67,12 @@ input{font-family:var(--fd);font-size:18px;background:var(--ink);color:var(--fg)
 .ai small{display:block;font-family:var(--fb);font-size:10.5px;color:var(--mute)}
 .ai.lock{opacity:.4}
 .ai.won{border-color:var(--ok)}
+.ai.sel{background:var(--panel2);border-color:var(--num);box-shadow:inset 0 0 0 1px var(--num)}
+.ai .ck{color:var(--ok);font-size:10px}
+.duo{display:grid;gap:8px;margin-top:8px}
+.duo .mode.lock{opacity:.5}
+.lvlinks{display:flex;justify-content:flex-end;gap:14px;margin:2px 4px 0}
+.lvlinks button{font-family:var(--fb);font-size:12.5px;color:var(--mute);text-decoration:underline;padding:4px 0}
 .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
 .box p{margin:0;line-height:1.5}
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--panel);border-top:1px solid var(--line);
@@ -319,16 +325,17 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
       <div class="xptx"><span id="pXpT">0 / 120 XP</span><span id="pNext">다음 칭호 Lv 5</span></div>
     </div>
     <button class="kongh" id="kongHome" aria-label="큐와 별콩이"><span class="kong-f" data-who="q"></span><span class="kong-f sm2"></span><span class="kbub" id="kongTx">안녕하세요! 저는 별콩이예요.</span></button>
-    <div class="sec">AI 대결 · 목표 1개를 만드는 길 3개 · 먼저 찾은 길 1점 · 5점 먼저</div>
+    <div class="sec">단계 · 계산 대결과 별자리 퍼즐이 같은 단계로 올라가요</div>
     <div class="ai-row" id="aiRow"></div>
+    <div class="duo"><button class="mode" id="mLvCalc"><span class="ic" style="background:var(--num);color:#2a1d00">+</span><span class="tx"><b>계산 대결</b><span id="lvCalcT"></span></span><span class="rt" id="lvCalcR"></span></button>
+    <button class="mode" id="mLvStar"><span class="ic" style="background:#ffd84d;color:#5a3a00">★</span><span class="tx"><b>별자리 퍼즐</b><span id="lvStarT"></span></span><span class="rt" id="lvStarR"></span></button></div>
+    <div class="lvlinks"><button id="lkRule">계산 규칙</button><button id="lkRooms">퍼즐 방 전체</button></div>
     <div class="sec">사람과 대결</div>
     <button class="mode" id="mRank"><span class="ic" style="background:var(--num);color:#2a1d00">R</span><span class="tx"><b>랭크전</b><span>실시간 1:1 · 5점 먼저 · 이기면 +25 RP</span></span><span class="rt" id="rankRt"></span></button>
     <button class="mode" id="mFriend"><span class="ic" style="background:var(--ok);color:#00261a">F</span><span class="tx"><b>친구 대결</b><span>방 번호로 가족·친구와 같은 문제 대결</span></span></button>
     <div class="sec">혼자 하기</div>
-    <button class="mode" id="mInf"><span class="ic" style="background:var(--hot);color:#2b0606">∞</span><span class="tx"><b>무한 러시</b><span>하트 3개 · 판이 5×5 → 8×8로 커져요</span></span><span class="rt" id="infBest"></span></button>
+    <button class="mode" id="mInf"><span class="ic" style="background:var(--hot);color:#2b0606">∞</span><span class="tx"><b>무한 러시</b><span>하트 3개 · 같은 5×5 판, 갈수록 목표가 어려워져요</span></span><span class="rt" id="infBest"></span></button>
     <button class="mode" id="mIq"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전 · 계산 대결</b><span>계산 판 4개 · 길 12개 · IQ가 실시간으로 올라가요</span></span><span class="rt" id="iqBest"></span></button>
-    <div class="sec">퍼즐 · 시간 제한 없이 천천히</div>
-    <button class="mode" id="mStar"><span class="ic" style="background:#ffd84d;color:#5a3a00">★</span><span class="tx"><b>별자리 퍼즐</b><span>길 위 숫자 합 = 별 · 가로세로 같은 숫자 금지</span></span><span class="rt" id="starBest"></span></button>
     <button class="mode" id="mIqS"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전 · 별자리 퍼즐</b><span>퍼즐 3판 · 빠르고 정확할수록 높은 IQ</span></span><span class="rt" id="iqSBest"></span></button>
   </div>
 
@@ -436,11 +443,12 @@ function addXp(x){const mk=monthKey();if(P.ss.id!==mk)P.ss={id:mk,sc:0};P.ss.sc+
 
 /* ================= AI ================= */
 const AIS=[
-  {nm:'초보',bot:'꼬마봇',t:[20,32],tg:{min:2,lo:5,hi:45,n:5}},
-  {nm:'보통',bot:'연필봇',t:[13,21],tg:{min:2,lo:8,hi:72,n:5}},
-  {nm:'어려움',bot:'주판봇',t:[10,16],tg:{min:3,lo:10,hi:99,n:5}},
-  {nm:'천재',bot:'알파봇',t:[7,12],tg:{min:3,lo:12,hi:150,n:6}},
-  {nm:'마스터',bot:'제로봇',t:[4.5,8],tg:{min:3,lo:15,hi:200,n:6}},
+  /* 1.8 (젠다): 계산 판은 모두 5×5 하나. 난이도 = 목표 크기·길에 쓰는 숫자 개수·AI 속도 */
+  {nm:'초보',bot:'꼬마봇',t:[20,32],tg:{min:2,lo:5,hi:30,n:5}},
+  {nm:'보통',bot:'연필봇',t:[14,22],tg:{min:2,lo:10,hi:60,n:5}},
+  {nm:'어려움',bot:'주판봇',t:[11,17],tg:{min:3,lo:10,hi:99,n:5}},
+  {nm:'천재',bot:'알파봇',t:[8,13],tg:{min:3,lo:20,hi:150,n:5}},
+  {nm:'마스터',bot:'제로봇',t:[5,9],tg:{min:4,lo:20,hi:200,n:5}},
 ];
 const LIVE_TG={min:2,lo:8,hi:99,n:5};
 
@@ -496,7 +504,7 @@ const T={};
 function clearT(){for(const k in T){clearTimeout(T[k]);delete T[k]}}
 function setRnd(seed){rnd=seed==null?Math.random:mul(seed)}
 const DAY_BOARDS=4;
-const IQ_PLAN=[{n:5,min:2,lo:5,hi:50},{n:5,min:3,lo:10,hi:99},{n:6,min:3,lo:10,hi:150},{n:7,min:3,lo:15,hi:200}],IQ_TIME=[50,60,70,80];
+const IQ_PLAN=[{n:5,min:2,lo:5,hi:50},{n:5,min:3,lo:10,hi:99},{n:5,min:3,lo:20,hi:150},{n:5,min:4,lo:20,hi:200}],IQ_TIME=[50,60,70,90];
 
 function startTut(){setRnd(null);G={mode:'tut',score:0,combo:0,best:0,solved:0,stage:0};begin(tutPuzzle(),0)}
 function startVs(lv){setRnd(null);G={mode:'vs',lv,ai:AIS[lv],me:0,op:0,goal:5,score:0,combo:0,best:0,solved:0,stage:0};nextPuzzle()}
@@ -504,15 +512,15 @@ function startInf(){setRnd(null);G={mode:'inf',hp:3,score:0,combo:0,best:0,solve
 function startDay(){const d=todayKey();setRnd(hashStr('day'+d));G={mode:'day',score:0,combo:0,best:0,solved:0,stage:0,total:DAY_BOARDS,key:d};nextPuzzle()}
 function startIq(){setRnd(null);G={mode:'iq',score:0,combo:0,best:0,solved:0,stage:0,total:IQ_PLAN.length,fr:[]};nextPuzzle()}
 
-function soloParams(s){const n=s<6?5:s<13?6:s<21?7:8;const min=s<3?2:3;const hi=s<6?60:s<13?120:200;return{n,min,lo:s<3?5:10,hi}}
-function soloLimit(s,n){return Math.max(16,38-s)+(n-5)*3}
+function soloParams(s){return s<3?{n:5,min:2,lo:5,hi:40}:s<6?{n:5,min:2,lo:10,hi:60}:s<10?{n:5,min:3,lo:10,hi:99}:s<16?{n:5,min:3,lo:20,hi:150}:{n:5,min:4,lo:20,hi:200}}
+function soloLimit(s,min){return Math.max(16,38-s)+(min-2)*4}
 
 function nextPuzzle(){
   const m=G.mode;let pz,dur=0;
   if(m==='vs')pz=makeBoard(G.ai.tg,K_PER);
   else if(m==='live'){setRnd(hashStr(G.room+'#'+G.stage));pz=makeBoard(LIVE_TG,K_PER);dur=90000}
   else if(m==='iq'){pz=makeBoard(IQ_PLAN[G.stage],K_PER);dur=IQ_TIME[G.stage]*1000}
-  else{const s=m==='day'?G.stage*3:G.stage*2;pz=makeBoard(soloParams(s),K_PER);dur=Math.round(soloLimit(s,pz.B.n)*2.2)*1000}
+  else{const s=m==='day'?G.stage*3:G.stage*2;pz=makeBoard(soloParams(s),K_PER);dur=Math.round(soloLimit(s,pz.T[0].min)*2.2)*1000}
   begin(pz,dur);
   if(m==='live'&&G.res)liveApply(G.res);
 }
@@ -905,7 +913,7 @@ function profHtml(){const L=lvOf(P.xp);const nx=TITLES.find(([l])=>l>L.lv);
 function renderPlay(){
   $('profBox').innerHTML=profHtml();$('profBox').classList.toggle('gold',adsRemoved());
   $('aiRow').innerHTML=AIS.map((a,k)=>{const open=UNLOCK()||k<=P.beaten,won=k<P.beaten;return'<button class="ai'+(open?'':' lock')+(won?' won':'')+'" data-k="'+k+'">'+a.nm+'<small>'+(open?a.bot:'잠김')+'</small></button>'}).join('');
-  $('aiRow').querySelectorAll('.ai').forEach(b=>b.onclick=()=>{const k=+b.dataset.k;if(!UNLOCK()&&k>P.beaten){note(AIS[k-1].nm+' AI를 이기면 열려요');return}startVs(k)});
+
   $('infBest').textContent=P.best?'최고 '+P.best:'';$('iqBest').textContent=P.iq?'최고 IQ '+P.iq:'';$('iqSBest').textContent=P.iqS?'최고 IQ '+P.iqS:'';
   $('rankRt').innerHTML=TIERS[tierOf(P.rp)][0]+'<br><span class="mut">'+P.rp+' RP</span>';
 }
@@ -1415,12 +1423,28 @@ function iqSFinish(){const R=IQS.res,iq=iqSLive(),before=lvOf(P.xp),nb=iq>(P.iqS
   $('rShare').onclick=()=>shareText('브레인 별셈 IQ 도전 · 별자리 퍼즐\n내 IQ '+iq+' (재미로 보는 점수)\n나보다 높게 나올 수 있어요?\nhttps://jjakkung-fc4b4.web.app')}
 const _gh5=goHome;goHome=function(){IQS=null;return _gh5.apply(this,arguments)};
 $('mIqS').onclick=startIqS;
-$('mStar').onclick=nfRooms;
+$('lkRooms').onclick=nfRooms;
 Object.assign(KL,{nfStart:['smile|빈 동그라미부터 하나씩 채워 봐요','think|빈칸이 하나뿐인 별을 먼저 찾아봐요','wink|가로줄·세로줄 같은 숫자만 조심!'],
   nfLit:['happy|별 하나 반짝!','excited|켜졌다! 다음 별도!','proud|좋아요, 그 길 맞았어요'],
   nfWrong:['worry|앗, 그 숫자는 아니에요. 확대 줄에 이유가 있어요','think|같은 줄에 이미 있는 숫자는 빼고 생각해 봐요'],
   nfWin:['love|별자리 완성! 정말 예뻐요','excited|다 켜졌어요! 최고예요','proud|역시! 다음 단계도 가 봐요']});
-const _rp2=renderPlay;renderPlay=function(){const r=_rp2.apply(this,arguments);const id=P.nfRoom||'sprout',x=NF_ROOMS.find(z=>z.id===id);$('starBest').innerHTML=x.emo+' '+P.sp[id].lv+'단계';return r};
+/* 1.8 (젠다): 단계 하나로 묶기. 초보=새싹방 … 마스터=고수방. 고른 단계에서 계산 대결·별자리 퍼즐 둘 다 해요 */
+function aiOpen(k){return UNLOCK()||k<=P.beaten}
+function lvOpen(k){return aiOpen(k)||nfRoomOpen(k)}
+const _rp2=renderPlay;renderPlay=function(){const r=_rp2.apply(this,arguments);
+  let k=P.lvSel;if(k==null||!lvOpen(k)){k=0;for(let i=0;i<AIS.length;i++)if(lvOpen(i))k=i}
+  $('aiRow').innerHTML=AIS.map((a,i)=>{const op=lvOpen(i),done=i<P.beaten&&P.sp[NF_ROOMS[i].id].clr>=(NF_ROOMS[i+1]?NF_ROOMS[i+1].need:1);
+    return '<button class="ai'+(op?'':' lock')+(i===k?' sel':'')+(i<P.beaten?' won':'')+'" data-k="'+i+'">'+a.nm+'<small>'+(op?NF_ROOMS[i].emo+' '+a.bot:'잠김')+'</small></button>'}).join('');
+  $('aiRow').querySelectorAll('.ai').forEach(b=>b.onclick=()=>{const i=+b.dataset.k;if(!lvOpen(i)){note(AIS[i-1].bot+'을 이기거나 '+NF_ROOMS[i-1].nm+'에서 '+NF_ROOMS[i].need+'판 깨면 열려요');return}P.lvSel=i;save();sTap();renderPlay()});
+  const a=AIS[k],rm=NF_ROOMS[k],sp=P.sp[rm.id],ao=aiOpen(k),so=nfRoomOpen(k);
+  $('lvCalcT').textContent=ao?a.bot+'과 대결 · 목표 1개 길 3개 · 5점 먼저':AIS[k-1].bot+'을 이기면 열려요';
+  $('lvCalcR').innerHTML=k<P.beaten?'이김 ✓':'';$('mLvCalc').classList.toggle('lock',!ao);
+  $('lvStarT').textContent=so?rm.emo+' '+rm.nm+' '+rm.n+'×'+rm.n+' · 시간 제한 없이 천천히':NF_ROOMS[k-1].nm+'에서 '+rm.need+'판 깨면 열려요';
+  $('lvStarR').innerHTML=so?sp.lv+'단계<br><span class="mut">★'+sp.st+'</span>':'';$('mLvStar').classList.toggle('lock',!so);
+  $('mLvCalc').onclick=()=>{if(!ao){note($('lvCalcT').textContent);return}startVs(k)};
+  $('mLvStar').onclick=()=>{if(!so){note($('lvStarT').textContent);return}nfStart(rm.id)};
+  return r};
+$('lkRule').onclick=()=>{if(typeof rules==='function')rules();else settings()};
 const _gh2=goHome;goHome=function(){S=null;return _gh2.apply(this,arguments)};
 const _ab2=window.__appBack;window.__appBack=function(){if(S&&!$('star').hidden&&$('ov').hidden){nfQuit();return true}return _ab2()};
 window.addEventListener('resize',()=>{if(S&&!$('star').hidden){nfLayout();nfDraw()}});
