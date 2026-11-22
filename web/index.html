@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="1.9"</script>
+<script>window.APP_VERSION="2.0"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -335,7 +335,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
     <button class="mode" id="mFriend"><span class="ic" style="background:var(--ok);color:#00261a">F</span><span class="tx"><b>친구 대결</b><span>방 번호로 가족·친구와 같은 문제 대결</span></span></button>
     <div class="sec">혼자 하기</div>
     <button class="mode" id="mInf"><span class="ic" style="background:var(--hot);color:#2b0606">∞</span><span class="tx"><b>무한 러시</b><span>하트 3개 · 같은 4×4 판, 갈수록 어려워져요</span></span><span class="rt" id="infBest"></span></button>
-    <button class="mode" id="mIq"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전 · 계산 대결</b><span>계산 판 4개 · 길 12개 · IQ가 실시간으로 올라가요</span></span><span class="rt" id="iqBest"></span></button>
+    <button class="mode" id="mIq"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전 · 계산 대결</b><span>계산 판 3판 · 빠르고 힌트 없이 풀수록 높은 IQ</span></span><span class="rt" id="iqBest"></span></button>
     <button class="mode" id="mIqS"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전 · 별자리 퍼즐</b><span>퍼즐 3판 · 빠르고 정확할수록 높은 IQ</span></span><span class="rt" id="iqSBest"></span></button>
   </div>
 
@@ -384,7 +384,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
   <div class="tgt"><div class="sum" id="sumBox"><span class="lbl">합계</span><b id="sumV">0</b></div><div class="goal"><span class="lbl">목표</span><span class="tv" id="tgt"></span><span class="ways" id="ways"></span></div><span class="cb" id="combo">콤보 x2</span></div>
   <div class="bwrap" id="bwrap"><div class="board" id="board"></div><svg class="pl" id="pl"></svg></div>
   <div class="expr" id="expr"></div>
-  <div class="ctl"><button class="btn" id="bClear">지우기</button></div>
+  <div class="ctl"><button class="btn" id="bHint" hidden>💡 힌트</button><button class="btn" id="bClear">지우기</button><button class="btn" id="bSkip" hidden>이 판 넘기기</button></div>
 </section>
 
 <!-- 별자리 퍼즐 (1.2, 별잇기 숫자 채우기) -->
@@ -510,13 +510,17 @@ const T={};
 function clearT(){for(const k in T){clearTimeout(T[k]);delete T[k]}}
 function setRnd(seed){rnd=seed==null?Math.random:mul(seed)}
 const DAY_BOARDS=4;
-const IQ_PLAN=[{n:4,ops:'+×',min:2,lo:8,hi:50},{n:4,ops:'+−×',min:3,lo:10,hi:80,wmax:6},{n:4,ops:'+−×÷',min:3,lo:15,hi:120,wmax:4},{n:4,ops:'+−×÷',min:4,lo:20,hi:200,wmax:4}],IQ_TIME=[45,55,65,80];
+/* 2.0 (젠다 "별잇기랑 동일한 조건"): IQ 도전 · 계산 대결 = 별자리 퍼즐 IQ와 같은 틀. 3판(초보·보통·어려움 = 새싹·별빛·달빛), 시간 제한 없음, 힌트 1번, 빠를수록·힌트 안 쓸수록 높은 IQ */
+const IQ_PLAN=[0,1,2],IQ_LIM=[30,60,100];
 
 function startTut(){setRnd(null);G={mode:'tut',score:0,combo:0,best:0,solved:0,stage:0};begin(tutPuzzle(),0)}
 function startVs(lv){setRnd(null);G={mode:'vs',lv,ai:AIS[lv],me:0,op:0,goal:5,score:0,combo:0,best:0,solved:0,stage:0};nextPuzzle()}
 function startInf(){setRnd(null);G={mode:'inf',hp:3,score:0,combo:0,best:0,solved:0,stage:0,revived:0};nextPuzzle()}
 function startDay(){const d=todayKey();setRnd(hashStr('day'+d));G={mode:'day',score:0,combo:0,best:0,solved:0,stage:0,total:DAY_BOARDS,key:d};nextPuzzle()}
-function startIq(){setRnd(null);G={mode:'iq',score:0,combo:0,best:0,solved:0,stage:0,total:IQ_PLAN.length,fr:[]};nextPuzzle()}
+function startIq(){
+  const go=()=>{closeModal();setRnd(null);G={mode:'iq',score:0,combo:0,best:0,solved:0,stage:0,total:IQ_PLAN.length,fr:[],res:[]};nextPuzzle()};
+  modal('<h2>IQ 도전 · 계산 대결</h2><p class="c">계산 판 3판(초보·보통·어려움)을 풀어요. 판마다 목표 숫자를 만드는 길 3개를 찾으면 다음 판이에요. 빨리, 힌트 없이 풀수록 IQ가 올라가요.</p><p class="c mut">시간 제한은 없어요. 길을 찾을 때마다 위에 IQ가 바로 바뀌어요. 힌트는 판마다 1번, 막히면 그 판을 넘길 수 있지만 그 판은 실패예요.</p><div class="row"><button class="btn pri" id="iqGo">시작</button><button class="btn" id="iqRule">규칙 보기</button><button class="btn" id="byN">닫기</button></div>');
+  $('iqGo').onclick=go;$('iqRule').onclick=()=>rules();$('byN').onclick=closeModal}
 
 function soloParams(s){return AIS[s<3?0:s<6?1:s<10?2:s<16?3:4].tg}
 function soloLimit(s,min){return Math.max(16,38-s)+(min-2)*4}
@@ -525,7 +529,7 @@ function nextPuzzle(){
   const m=G.mode;let pz,dur=0;
   if(m==='vs')pz=makeBoard(G.ai.tg,K_PER);
   else if(m==='live'){setRnd(hashStr(G.room+'#'+G.stage));pz=makeBoard(LIVE_TG,K_PER);dur=90000}
-  else if(m==='iq'){pz=makeBoard(IQ_PLAN[G.stage],K_PER);dur=IQ_TIME[G.stage]*1000}
+  else if(m==='iq'){pz=makeBoard(AIS[IQ_PLAN[G.stage]].tg,K_PER);dur=0;G.t0=performance.now();G.hints=1}
   else{const s=m==='day'?G.stage*3:G.stage*2;pz=makeBoard(soloParams(s),K_PER);dur=Math.round(soloLimit(s,pz.T[0].min)*2.2)*1000}
   begin(pz,dur);
   if(m==='live'&&G.res)liveApply(G.res);
@@ -573,7 +577,18 @@ function timeUp(){
   toast('시간 끝','var(--hot)');renderHud();G.stage++;
   T.nx=setTimeout(afterRound,1900);
 }
-function boardDone(){G.live=false;clearT();freezeFuse();G.stage++;T.nx=setTimeout(afterRound,1100)}
+function boardDone(){G.live=false;clearT();freezeFuse();
+  if(G.mode==='iq'){const sec=(performance.now()-G.t0)/1000;G.res.push({ok:true,sec,v:iqPzVal(sec,IQ_LIM[G.stage],0,G.hints)});renderHud();sBig();toast('판 완성!','var(--num)','IQ '+iqRush());G.stage++;T.nx=setTimeout(afterRound,1400);return}
+  G.stage++;T.nx=setTimeout(afterRound,1100)}
+function iqHint(){if(!G||G.mode!=='iq'||!G.live)return;if(G.hints<=0)return note('IQ 도전에서는 힌트가 1번이에요');
+  const used=new Set(G.pz.T.map(t=>t.key).filter(Boolean)),w=G.pz.ways.find(x=>!used.has(x.key));if(!w)return;
+  G.hints--;const kids=$('board').children;w.p.slice(0,3).forEach(i=>kids[i].classList.add('tip'));sTap();renderHud();
+  note('💡 빛나는 '+G.pz.B.cells[w.p[0]].v+' '+G.pz.B.cells[w.p[1]].v+' '+G.pz.B.cells[w.p[2]].v+'(으)로 시작해 보세요')}
+function iqSkip(){if(!G||G.mode!=='iq'||!G.live)return;
+  modal('<h2>이 판을 넘길까요?</h2><p class="c">넘기면 이 판은 실패로 쳐요.</p><div class="row"><button class="btn pri" id="qNo">계속 찾기</button><button class="btn" id="qYes">넘기기</button></div>');
+  $('qNo').onclick=closeModal;$('qYes').onclick=()=>{closeModal();if(!G||!G.live)return;const sec=(performance.now()-G.t0)/1000;G.res.push({ok:false,sec,v:0});G.live=false;clearT();sLose();
+    const used=new Set(G.pz.T.map(t=>t.key).filter(Boolean)),w=G.pz.ways.find(x=>!used.has(x.key));if(w)showOpPath(w.p,'이런 길도 있었어요',G.pz.v);
+    renderHud();toast('판 넘김','var(--hot)','IQ '+iqRush());G.stage++;T.nx=setTimeout(afterRound,1900)}}
 function afterRound(){
   if(!G)return;
   if(G.mode==='vs'){if(G.me>=G.goal)return finish(true);if(G.op>=G.goal)return finish(false)}
@@ -605,6 +620,7 @@ function solved(idx){
   if(!openT().length)boardDone();
 }
 function pauseG(){const was=G.live;if(was){const now=performance.now();G.left=Math.max(0,G.end-now);if(G.mode==='vs'&&G.aiEnd)G.aiLeft=Math.max(0,G.aiEnd-now)}
+  if(G.mode==='iq'&&was)G.pz0=performance.now();
   G.live=false;clearT();freezeFuse();return was}
 
 /* ================= board ================= */
@@ -695,6 +711,7 @@ function renderHud(){
     $('pipMe').innerHTML=Array.from({length:goal},(_,k)=>'<i class="'+(k<G.me?'me':'')+'"></i>').join('');
     $('pipOp').innerHTML=Array.from({length:goal},(_,k)=>'<i class="'+(k<G.op?'op':'')+'"></i>').join('')}
   if(G.pz){$('tgt').textContent=G.pz.v;const n=G.pz.T.length;$('ways').innerHTML=n>1?G.pz.T.map(t=>'<i class="'+(t.who||'')+'"></i>').join('')+'<small>'+G.pz.T.filter(t=>t.who==='me').length+'/'+n+'</small>':''}
+  $('bHint').hidden=$('bSkip').hidden=m!=='iq';if(m==='iq')$('bHint').textContent='💡 힌트 '+G.hints;
   const cb=$('combo');cb.textContent='콤보 x'+G.combo;cb.classList.toggle('on',G.combo>1);
 }
 function toast(t,col,sub,sm){const el=$('toast');el.className='toast'+(sm?' sm':'');el.innerHTML=t+(sub?'<small>'+sub+'</small>':'');el.style.color=col;void el.offsetWidth;el.classList.add('go')}
@@ -724,6 +741,7 @@ function offerRevive(){
     rewarded('revive',ok=>{closeModal();if(ok){G.hp=1;nextPuzzle()}else{note('광고를 불러오지 못했어요');finish(false)}})};
 }
 function finish(win){
+  if(G.mode==='iq')return iqRFinish();
   clearT();G.live=false;G.done=1;
   const before=lvOf(P.xp);
   let xp=Math.round(G.score/10);let head,lines=[],extraBtn='';
@@ -1036,6 +1054,7 @@ function askQuit(){
 }
 function resume(was){if(!G)return;if(!was){afterRound();return}
   G.live=true;const now=performance.now();
+  if(G.pz0){G.t0+=now-G.pz0;G.pz0=0}
   if(G.dur){const left=G.left!=null?G.left:Math.max(0,G.end-now);G.left=null;G.end=now+left;runFuse(left,G.dur);T.end=setTimeout(timeUp,left)}
   if(G.mode==='vs'&&G.aiLeft!=null){const l=G.aiLeft;G.aiLeft=null;G.aiEnd=now+l;runFuse(l,G.aiDur);T.ai=setTimeout(aiClaim,l)}}
 window.__appBack=function(){
@@ -1169,7 +1188,7 @@ const _liveApply=liveApply;liveApply=function(res){const before=G.op;const r=_li
 /* ★ 별: 판마다 조금씩, 상점에서 테마·소품을 사요 (승부에는 영향 없음) */
 const _finish=finish;finish=function(win){
   const m=G.mode,lv0=lvOf(P.xp).lv,best0=P.best;let c=Math.max(1,Math.round(G.score/150));
-  if(m==='vs'&&win)c+=3+G.lv*2;if(m==='live'&&win)c+=G.ranked?8:4;if(m==='day'&&!P.day[G.key])c+=5;if(m==='tut')c=0;
+  if(m==='vs'&&win)c+=3+G.lv*2;if(m==='live'&&win)c+=G.ranked?8:4;if(m==='day'&&!P.day[G.key])c+=5;if(m==='tut'||m==='iq')c=0;
   P.coins+=c;
   const r=_finish.apply(this,arguments);
   try{const kv=$('ovc').querySelector('.kv');if(kv&&c)kv.insertAdjacentHTML('beforeend','<span>얻은 별</span><b>★'+c+' (가진 별 ★'+P.coins+')</b>')}catch(e){}
@@ -1396,8 +1415,9 @@ $('nfMemoB').onclick=()=>{if(!nfCan())return;S.memoMode=!S.memoMode;sTap();nfHud
 $('nfBack').onclick=nfQuit;
 /* IQ 도전 두 가지 (젠다 2026-11-22 "브레인러쉬와 별잇기를 따로", "아이큐 점수가 실시간으로")
    점수는 맞힐 때마다·별이 켜질 때마다 다시 계산해 위에 보여요 (계속 도는 타이머 없음) */
-function iqRush(){if(!G)return 70;const fr=G.fr||[],avg=fr.length?fr.reduce((a,b)=>a+b,0)/fr.length:0;
-  return Math.max(70,Math.min(150,Math.round(70+80*(.85*G.solved/(G.total*K_PER)+.15*avg*Math.min(1,G.solved/(G.total*K_PER)*2)))))}
+function iqRush(){if(!G||!G.res)return 70;let v=G.res.reduce((a,x)=>a+x.v,0);
+  if(G.live&&G.pz&&G.res.length===G.stage){const f=G.pz.T.filter(t=>t.who==='me').length/G.pz.T.length;v+=f*.55*(1-Math.min(.6,.15*(1-G.hints)))}
+  return Math.max(70,Math.min(150,Math.round(70+80*v/IQ_PLAN.length)))}
 const IQ_PZ=[{room:'sprout',lim:45},{room:'star',lim:100},{room:'moon',lim:200}];
 let IQS=null;
 function iqPzVal(sec,lim,mist,hintsLeft){const sp=Math.max(0,Math.min(1,1.5-sec/lim)),pen=Math.min(.6,.15*mist+.15*(1-hintsLeft));return Math.max(0,(.55+.45*sp)*(1-pen))}
@@ -1427,6 +1447,19 @@ function iqSFinish(){const R=IQS.res,iq=iqSLive(),before=lvOf(P.xp),nb=iq>(P.iqS
   say(nb?'best':'win',null,1);
   $('rAgain').onclick=()=>{closeModal();maybeInter('nf',startIqS)};$('rHome').onclick=()=>{closeModal();maybeInter('nf',goHome)};
   $('rShare').onclick=()=>shareText('브레인 별셈 IQ 도전 · 별자리 퍼즐\n내 IQ '+iq+' (재미로 보는 점수)\n나보다 높게 나올 수 있어요?\nhttps://jjakkung-fc4b4.web.app')}
+function iqRFinish(){clearT();G.live=false;G.done=1;const R=G.res,iq=iqRush(),before=lvOf(P.xp),nb=iq>(P.iq||0);if(nb)P.iq=iq;
+  const xp=20+Math.round(G.score/10),coins=1+R.filter(x=>x.ok).length*2;
+  P.games++;P.coins+=coins;addXp(xp);save();syncOnline();sBig();
+  const after=lvOf(P.xp);
+  modal('<h2>'+(nb?'IQ 도전 · 새 기록!':'IQ 도전 결과')+'</h2><div class="big">IQ '+iq+'</div><p class="c mut">계산 대결 IQ예요. 재미로 보는 점수예요.</p><div class="kv">'+
+    R.map((x,i)=>'<span>계산 '+(i+1)+' ('+AIS[IQ_PLAN[i]].nm+')</span><b>'+(x.ok?Math.round(x.sec)+'초':'실패')+'</b>').join('')+
+    '<span>내 최고 IQ</span><b>'+P.iq+'</b><span>얻은 경험치</span><b>+'+xp+' XP</b><span>얻은 별</span><b>★'+coins+' (가진 별 ★'+P.coins+')</b></div>'+
+    (after.lv>before.lv?'<p class="c" style="color:var(--num);font-family:var(--fd);font-size:18px">레벨 업! Lv '+after.lv+'</p>':'')+
+    '<div class="row"><button class="btn pri" id="rAgain">다시 하기</button><button class="btn" id="rShare">IQ 자랑하기</button><button class="btn" id="rHome">홈으로</button></div>');
+  say(nb?'best':'win',null,1);
+  $('rAgain').onclick=()=>{closeModal();maybeInter('iq',startIq)};$('rHome').onclick=()=>{closeModal();maybeInter('iq',goHome)};
+  $('rShare').onclick=()=>shareText('브레인 별셈 IQ 도전 · 계산 대결\n내 IQ '+iq+' (재미로 보는 점수)\n나보다 높게 나올 수 있어요?\nhttps://jjakkung-fc4b4.web.app')}
+$('bHint').onclick=iqHint;$('bSkip').onclick=iqSkip;
 const _gh5=goHome;goHome=function(){IQS=null;return _gh5.apply(this,arguments)};
 $('mIqS').onclick=startIqS;
 $('lkRooms').onclick=nfRooms;
