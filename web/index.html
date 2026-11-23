@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="2.4"</script>
+<script>window.APP_VERSION="2.5"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -331,7 +331,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
     <button class="mode" id="mLvStar" hidden><span class="ic" style="background:#ffd84d;color:#5a3a00">★</span><span class="tx"><b>별자리 퍼즐</b><span id="lvStarT"></span></span><span class="rt" id="lvStarR"></span></button></div>
     <div class="lvlinks"><button id="lkRule">계산 규칙</button><button id="lkRooms" hidden>퍼즐 방 전체</button></div>
     <div class="sec">대결</div>
-    <button class="mode" id="mAi"><span class="ic" style="background:var(--op);color:#002a30">AI</span><span class="tx"><b>AI 대결</b><span>꼬마봇~제로봇 · 목표 1개 길 3개 · 5점 먼저</span></span><span class="rt" id="aiRt"></span></button>
+    <button class="mode" id="mAi"><span class="ic" style="background:var(--op);color:#002a30">👑</span><span class="tx"><b>도전! 별셈왕</b><span>꼬마봇~제로봇 · 목표 1개 길 3개 · 5점 먼저</span></span><span class="rt" id="aiRt"></span></button>
     <button class="mode" id="mRank" hidden><span class="ic" style="background:var(--num);color:#2a1d00">R</span><span class="tx"><b>랭크전</b><span>실시간 1:1 · 5점 먼저 · 이기면 +25 RP</span></span><span class="rt" id="rankRt"></span></button>
     <button class="mode" id="mFriend"><span class="ic" style="background:var(--ok);color:#00261a">F</span><span class="tx"><b>한판 승부</b><span>방 번호로 초대해서 실시간 1:1 · 5점 먼저</span></span><span class="rt" id="frRt"></span></button>
     <div class="sec">혼자 하기</div>
@@ -375,7 +375,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
 
 <!-- GAME -->
 <section class="scr" id="game" hidden>
-  <div class="top"><button class="back" id="gBack" aria-label="그만하기">‹</button><span class="kong-f sm" id="kongG" data-who="q"></span><span class="md" id="gMode">AI 대결</span><span class="hp" id="gHp"></span><span class="sc" id="gSc">0</span></div>
+  <div class="top"><button class="back" id="gBack" aria-label="그만하기">‹</button><span class="kong-f sm" id="kongG" data-who="q"></span><span class="md" id="gMode">도전! 별셈왕</span><span class="hp" id="gHp"></span><span class="sc" id="gSc">0</span></div>
   <div class="vs" id="vsBox">
     <div class="side"><span class="nm" id="meNm">나</span><div class="pips" id="pipMe"></div></div>
     <span class="vsx">VS</span>
@@ -705,7 +705,7 @@ $('bClear').onclick=()=>{if(G&&G.live){path=[];renderPath()}};
 /* ================= HUD ================= */
 function renderHud(){
   const m=G.mode,vs=m==='vs'||m==='live';
-  $('gMode').textContent=m==='vs'?'AI 대결 · '+G.ai.nm:m==='live'?(G.ranked?'랭크전':'한판 승부'):m==='inf'?'무한 러시 · '+(G.stage+1)+'판':m==='day'?'오늘의 러시 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='iq'?'IQ 도전 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='demo'?'게임 방법':m==='step'?'별셈 퍼즐 · '+AIS[G.lv].nm+' '+G.slv+'단계':'첫 문제';
+  $('gMode').textContent=m==='vs'?'도전! 별셈왕 · '+G.ai.nm:m==='live'?(G.ranked?'랭크전':'한판 승부'):m==='inf'?'무한 러시 · '+(G.stage+1)+'판':m==='day'?'오늘의 러시 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='iq'?'IQ 도전 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='demo'?'게임 방법':m==='step'?'별셈 퍼즐 · '+AIS[G.lv].nm+' '+G.slv+'단계':'첫 문제';
   $('gHp').textContent=m==='inf'?'♥'.repeat(Math.max(0,G.hp))+'♡'.repeat(Math.max(0,3-G.hp)):'';
   $('gSc').textContent=m==='iq'?'IQ '+iqRush():m==='step'?'★'.repeat(stepStars())+'☆'.repeat(3-stepStars()):G.score;
   $('vsBox').querySelectorAll('.side,.vsx').forEach(x=>x.hidden=!vs);
@@ -922,7 +922,7 @@ async function hostFriend(code){
 window.__appJoin=c=>{if(G&&!G.done)return;closeModal();goHome();if(ONLINE())net().then(ok=>ok&&joinRoom('F'+c,false,false))};
 window.__appGo=g=>{if(G&&!G.done)return;closeModal();goHome();tab(g==='daily'?'Day':'Play')};
 async function needOnline(){
-  if(!ONLINE()){modal('<h2>앱에서 열려요</h2><p class="c">한판 승부는 인터넷으로 사람과 겨루는 거라 앱에서 할 수 있어요.</p><div class="row"><button class="btn pri" id="noA">AI와 하기</button><button class="btn" id="noB">닫기</button></div>');$('noA').onclick=()=>{closeModal();startVs(Math.min(P.beaten,4))};$('noB').onclick=closeModal;return false}
+  if(!ONLINE()){modal('<h2>앱에서 열려요</h2><p class="c">한판 승부는 인터넷으로 사람과 겨루는 거라 앱에서 할 수 있어요.</p><div class="row"><button class="btn pri" id="noA">별셈왕 도전</button><button class="btn" id="noB">닫기</button></div>');$('noA').onclick=()=>{closeModal();startVs(Math.min(P.beaten,4))};$('noB').onclick=closeModal;return false}
   if(!(await net())){note('인터넷 연결을 확인해 주세요');return false}
   return true;
 }
@@ -1487,7 +1487,7 @@ function stepWin(){const k=G.lv,cs=P.cs[k],stars=stepStars(),before=lvOf(P.xp),x
     '<div class="row"><button class="btn pri" id="rNext">다음 단계 ▶ '+cs.lv+'단계</button><button class="btn" id="rHome">홈으로</button></div>');
     say(after.lv>before.lv?'lvup':'win',null,1);
     $('rNext').onclick=()=>{closeModal();maybeInter('nf',()=>startStep(k))};$('rHome').onclick=()=>{closeModal();maybeInter('nf',goHome)}},900)}
-function aiPick(){modal('<h2>AI 대결</h2><p class="c mut">같은 판에서 길을 먼저 찾으면 1점, 5점 먼저 내면 승리!</p><div class="lb">'+AIS.map((a,k)=>{const op=aiOpen(k);
+function aiPick(){modal('<h2>도전! 별셈왕</h2><p class="c mut">같은 판에서 길을 먼저 찾으면 1점, 5점 먼저 내면 승리!</p><div class="lb">'+AIS.map((a,k)=>{const op=aiOpen(k);
     return '<button class="mode'+(op?'':' lock')+'" data-k="'+k+'" style="padding:9px 12px'+(op?'':';opacity:.5')+'"><span class="ic" style="background:var(--panel2);font-size:15px">'+a.nm+'</span><span class="tx"><b>'+a.bot+'</b><span>'+(a.tg.ops.split('').join(' '))+' · 4×4 판</span></span><span class="rt">'+(k<P.beaten?'이김 ✓':op?'':AIS[k-1].bot+'을<br>이기면')+'</span></button>'}).join('')+
     '</div><div class="row"><button class="btn" id="byN">닫기</button></div>');
   $('byN').onclick=closeModal;$('ovc').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k;if(!aiOpen(k)){note(AIS[k-1].bot+'을 이기면 열려요');return}closeModal();startVs(k)})}
@@ -1561,7 +1561,7 @@ function rushDemo(replay){
     {t:'숫자에서 시작해 <b>옆 칸(위·아래·왼쪽·오른쪽)</b>으로 이어 그려요. 왼쪽 위 <b>합계</b>에 지금 값이 크게 나와요. <b>4 + 3</b> = 7!',ex:'think',spot:'sumBox',run:()=>{reset();draw(tA.sol.slice(0,3),0,600)}},
     {t:'계산은 <b>앞에서부터 차례로</b>, 계산기처럼요. 이어서 <b>× 2</b> 하면 7 × 2 = <b style="color:var(--num)">14</b>. 합계가 목표가 되는 순간 정답이에요!',ex:'proud',spot:'sumBox',run:()=>{reset();path=tA.sol.slice(0,3);renderPath();draw(tA.sol,3,600,()=>got(tA))}},
     {t:'같은 14를 <b>다른 길</b>로도 만들어요. 이번엔 <b>'+ex(tB.sol)+'</b>! 이미 찾은 길은 다시 안 되고, ÷는 나누어떨어질 때만 돼요.',ex:'wink',spot:'ways',run:()=>{reset([[tA,'me']]);draw(tB.sol,0,550,()=>got(tB))}},
-    {t:'AI 대결·한판 승부에서는 <b style="color:var(--hot)">상대도 같은 판</b>에서 길을 찾아요. 빨간 길은 상대가 먼저 찾은 길이에요. <b>5점</b> 먼저 내면 승리! 빨리, 연속으로(콤보) 찾을수록 점수가 커요.',ex:'surprise',spot:'ways',run:()=>{reset([[tA,'me'],[tB,'me']]);coAt(500,()=>{tC.who='op';tC.key=keyOf(tC.sol);sLose();renderHud();flashOp(tC.sol);toast('상대 득점','var(--hot)')})}},
+    {t:'도전! 별셈왕·한판 승부에서는 <b style="color:var(--hot)">상대도 같은 판</b>에서 길을 찾아요. 빨간 길은 상대가 먼저 찾은 길이에요. <b>5점</b> 먼저 내면 승리! 빨리, 연속으로(콤보) 찾을수록 점수가 커요.',ex:'surprise',spot:'ways',run:()=>{reset([[tA,'me'],[tB,'me']]);coAt(500,()=>{tC.who='op';tC.key=keyOf(tC.sol);sLose();renderHud();flashOp(tC.sol);toast('상대 득점','var(--hot)')})}},
     {t:'이제 직접 해 보세요! <b>4</b>에서 시작해 <b>+ 3 × 2</b>로 <b style="color:var(--num)">14</b>를 만들어요.',ex:'excited',btn:'직접 해 보기',run:()=>reset([[tA,'me'],[tB,'me'],[tC,'op']])}
   ],()=>{startTut()},()=>{if(replay){goHome();return}P.seen=1;save();goHome()});
 }
