@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="2.6"</script>
+<script>window.APP_VERSION="2.7"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -91,6 +91,9 @@ input{font-family:var(--fd);font-size:18px;background:var(--ink);color:var(--fg)
 .lr .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lr .nm small{color:var(--mute);margin-left:6px;font-size:12px}
 .lr .v{font-family:var(--fd);color:var(--num);font-variant-numeric:tabular-nums}
+.lr.tl .nm{white-space:normal}
+.lr .tc{display:block;font-size:12px;line-height:1.5;margin-top:2px;text-align:left;border:0;padding:0;background:none;font-family:var(--fb)}
+.lr.nx{border:1px dashed var(--num)}
 .tier{display:flex;align-items:center;gap:12px}
 .emb{width:54px;height:54px;flex:none}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
@@ -417,7 +420,7 @@ const KEY='brainrush.v1';
 let P={xp:0,beaten:0,best:0,day:{},theme:'base',snd:1,vib:1,unlock:0,seen:0,nick:'',rp:0,games:0,wins:0,solved:0,ss:{id:'',sc:0},streak:{last:'',n:0},noti:0,notiAsk:0,adsOff:0,results:0};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s)P=Object.assign(P,s)}catch(e){}
 if(!P.nick)P.nick='러셔'+String(1000+Math.floor(Math.random()*9000));
-function save(){try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}}
+function save(){try{tCheck()}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}}
 const UNLOCK=()=>TEST_UNLOCK_ALL||P.unlock;
 function adsRemoved(){if(P.adsOff)return true;try{return !!(APP&&APP.adsRemoved&&APP.adsRemoved())}catch(e){return false}}
 
@@ -433,11 +436,25 @@ const TITLES=[[1,'계산 새싹'],[3,'숫자 탐험가'],[6,'계산 견습생'],
 const TITLES_OLD=[[1,'계산 견습생'],[5,'브레인 헌터'],[10,'수학 마스터'],[18,'천재 전략가'],[30,'계산의 신']];
 const need=lv=>80+40*lv;
 function lvOf(xp){let lv=1;while(xp>=need(lv)){xp-=need(lv);lv++}return{lv,rest:xp,need:need(lv)}}
-function titleIdx(lv){let k=0;TITLES.forEach(([l],i)=>{if(lv>=l)k=i});return Math.max(k,P&&P.tKeep||0)}
-function titleOf(lv){return TITLES[titleIdx(lv)][1]}
-function tGot(i,lv){return lv>=TITLES[i][0]||i<=(P.tKeep||0)}
+/* 2.7 (젠다 "레벨만 오른다고 칭호가 붙는 게 아니고 실력도 같이"): 칭호마다 레벨 + 실력 조건이 다 맞아야 승급.
+   ★ = 별셈 퍼즐에서 모은 별, 별셈왕 = 도전! 별셈왕에서 이긴 상대 수, 단계 = 별셈 퍼즐 단계가 열림, IQ = IQ 도전 최고 */
+const T_REQ=[{},{star:5},{star:15,bot:1},{star:30,open:1},{star:50,bot:2,iq:100},{star:80,open:2},{star:120,bot:3,iq:110},{star:180,open:3},{star:250,bot:4,iq:120},{star:350,open:4,iq:130},{star:450,bot:5},{star:600,mclr:30,iq:140},{star:800,mclr:60,iq:145}];
+function tStats(){const cs=P.cs||[],need=[0,3,5,8,10];let open=0;for(let k=1;k<5;k++)if(cs[k-1]&&cs[k-1].clr>=need[k])open=k;else break;
+  return{lv:lvOf(P.xp).lv,star:cs.reduce((a,c)=>a+(c&&c.st||0),0),bot:P.beaten||0,open,iq:P.iq||0,mclr:cs[4]?cs[4].clr:0}}
+const T_NM={lv:'Lv',star:'★',bot:'별셈왕',open:'단계',iq:'IQ',mclr:'마스터'};
+function tConds(i,st){st=st||tStats();const r=Object.assign({lv:TITLES[i][0]},T_REQ[i]);return Object.keys(r).filter(k=>i&&r[k]).map(k=>({k,need:r[k],cur:st[k],ok:st[k]>=r[k]}))}
+function tMet(i,st){return tConds(i,st).every(c=>c.ok)}
+function tCalc(){const st=tStats();let i=0;while(i+1<TITLES.length&&tMet(i+1,st))i++;return i}
+function titleIdx(){return Math.max(P.tIdx||0,P.tKeep||0)}
+function titleOf(){return TITLES[titleIdx()][1]}
+function tGot(i){return i<=titleIdx()}
+function tCheck(quiet){if(!P.cs||!P.cs.length)return;const i=tCalc();if(P.tIdx==null){P.tIdx=i;return}if(i>(P.tIdx||0)){P.tIdx=i;if(!quiet&&i>(P.tKeep||0))setTimeout(()=>{try{sBig();toast('새 칭호!','var(--num)',TITLES[i][1])}catch(e){}},1600)}}
+function tCondTx(c){const lab={lv:'Lv '+c.need,star:'★'+Math.min(c.cur,c.need)+'/'+c.need,bot:'별셈왕 '+Math.min(c.cur,c.need)+'/'+c.need+'명',open:['','보통','어려움','천재','마스터'][c.need]+' 단계 열기',iq:'IQ '+c.need,mclr:'마스터 '+Math.min(c.cur,c.need)+'/'+c.need+'판'}[c.k];
+  return '<span style="color:'+(c.ok?'var(--ok)':'var(--mute)')+'">'+(c.ok?'✓ ':'')+lab+'</span>'}
+function titlesHtml(){const st=tStats(),cur=titleIdx();return TITLES.map(([l,n],i)=>{const got=tGot(i),nx=i===cur+1;
+  return '<div class="lr tl'+(got?' me':'')+(nx?' nx':'')+'"><span class="k">'+(i+1)+'</span><span class="nm">'+n+(got||!i?'':'<div class="tc">'+tConds(i,st).map(tCondTx).join(' · ')+'</div>')+'</span><span class="v">'+(got?'획득':nx?'다음':'')+'</span></div>'}).join('')}
 /* 이미 얻은 옛 칭호는 그대로 지켜요 (한 번만) */
-if(!P.tv){P.tv=2;if(P.xp>0){const lv=lvOf(P.xp).lv;let on='';for(const [l,n] of TITLES_OLD)if(lv>=l)on=n;P.tKeep=Math.max(0,TITLES.findIndex(t=>t[1]===on))}save()}
+if(!P.tv){P.tv=3;if(P.xp>0){const lv=lvOf(P.xp).lv;let on='';for(const [l,n] of TITLES_OLD)if(lv>=l)on=n;P.tKeep=Math.max(0,TITLES.findIndex(t=>t[1]===on))}save()}
 const THEMES=[['base','기본',1],['gold','골드',3],['neon','네온',6],['cyber','사이버펑크',9],['magic','마법진',13]];
 function applyTheme(){document.body.className=P.theme==='base'?'':'th-'+P.theme}
 const TIERS=[['브론즈',0,'#c98a5a'],['실버',100,'#c4cbe0'],['골드',250,'#ffd166'],['플래티넘',450,'#7ee0d0'],['다이아',700,'#8fb6ff'],['마스터',1000,'#c9a7ff'],['그랜드마스터',1400,'#ff8fa3']];
@@ -792,7 +809,7 @@ function finish(win){
   const after=lvOf(P.xp);
   let extra='';
   if(after.lv>before.lv){sBig();extra='<p class="c" style="color:var(--num);font-family:var(--fd);font-size:18px">레벨 업! Lv '+after.lv+'</p>';
-    if(titleOf(after.lv)!==titleOf(before.lv))extra+='<p class="c">새 칭호 <b style="color:var(--num)">'+titleOf(after.lv)+'</b></p>';
+    if(0)extra+='<p class="c">새 칭호 <b style="color:var(--num)">'+titleOf(after.lv)+'</b></p>';
     for(const [id,nm,l] of THEMES)if(l>before.lv&&l<=after.lv)extra+='<p class="c">숫자 테마 <b>'+nm+'</b> 열림</p>'}
   else win?sWin():sLose();
   const again=G.mode==='live'?'':'<button class="btn '+(extraBtn?'':'pri')+'" id="rAgain">'+(G.mode==='vs'||G.mode==='iq'?'다시 하기':G.mode==='day'?'한 번 더 (기록은 최고만)':'한 번 더')+'</button>';
@@ -947,8 +964,8 @@ function tab(t){curTab=t;for(const b of document.querySelectorAll('.tab'))b.clas
   if(t==='Play')renderPlay();if(t==='Day')renderDay();if(t==='Rank')renderRank();if(t==='Me')renderMe();banner()}
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.t));
 function goHome(){clearT();leaveRoom();G=null;show('home');tab(curTab);if(P.seen&&$('ov').hidden)maybeAskNoti()}
-function profHtml(){const L=lvOf(P.xp);const ti=titleIdx(L.lv),nx=TITLES[ti+1];
-  return '<div class="lvbadge">'+L.lv+'<small>LV</small></div><div class="ttl"><b style="font-weight:400">'+titleOf(L.lv)+'</b><span>'+esc(P.nick)+'</span></div><div class="xpbar"><i style="transform:scaleX('+(L.rest/L.need)+')"></i></div><div class="xptx"><span>'+L.rest+' / '+L.need+' XP</span><span>'+(nx?'다음 칭호 Lv '+nx[0]:'최고 칭호')+'</span></div>'}
+function profHtml(){const L=lvOf(P.xp);const ti=titleIdx(),nx=TITLES[ti+1];
+  return '<div class="lvbadge">'+L.lv+'<small>LV</small></div><div class="ttl"><b style="font-weight:400">'+titleOf(L.lv)+'</b><span>'+esc(P.nick)+'</span></div><div class="xpbar"><i style="transform:scaleX('+(L.rest/L.need)+')"></i></div><div class="xptx"><span>'+L.rest+' / '+L.need+' XP</span><span>'+(nx?'다음 칭호 '+nx[1]:'최고 칭호')+'</span></div>'}
 function renderPlay(){
   $('profBox').innerHTML=profHtml();$('profBox').classList.toggle('gold',adsRemoved());
   $('aiRow').innerHTML=AIS.map((a,k)=>{const open=UNLOCK()||k<=P.beaten,won=k<P.beaten;return'<button class="ai'+(open?'':' lock')+(won?' won':'')+'" data-k="'+k+'">'+a.nm+'<small>'+(open?a.bot:'잠김')+'</small></button>'}).join('');
@@ -990,7 +1007,7 @@ function renderMe(){
   const sw={base:['#232862','#fff','#6ee7f9'],gold:['#2b2346','#ffd166','#ffe9b0'],neon:['#0d2a3a','#7cf7ff','#ff7ad9'],cyber:['#2a0f3a','#ff4fd8','#f7ff4f'],magic:['#2a1846','#e9d7ff','#b8f2c8']};
   $('meTheme').innerHTML=THEMES.map(([id,nm,l])=>{const s=sw[id],open=UNLOCK()||lv>=l||(id==='gold'&&adsRemoved());return'<button class="thb'+(P.theme===id?' sel':'')+(open?'':' lock')+'" data-id="'+id+'" data-open="'+(open?1:0)+'" data-l="'+l+'"><span class="sw"><i style="background:'+s[0]+';color:'+s[1]+'">7</i><i style="color:'+s[2]+'">×</i><i style="background:'+s[0]+';color:'+s[1]+'">3</i></span>'+nm+'<small>'+(open?(P.theme===id?'사용 중':'사용하기'):'Lv '+l+'에 열림')+'</small></button>'}).join('');
   $('meTheme').querySelectorAll('.thb').forEach(b=>b.onclick=()=>{if(b.dataset.open!=='1'){note('Lv '+b.dataset.l+'에 열려요');return}P.theme=b.dataset.id;save();applyTheme();renderMe()});
-  $('meTitles').innerHTML=TITLES.map(([l,n],i)=>'<div class="lr'+(tGot(i,lv)?' me':'')+'"><span class="k">'+l+'</span><span class="nm">'+n+'</span><span class="v">'+(tGot(i,lv)?'획득':'Lv '+l)+'</span></div>').join('');
+  $('meTitles').innerHTML=titlesHtml();
 }
 $('mInf').onclick=startInf;$('mIq').onclick=startIq;$('mDay').onclick=startDay;$('dShare').onclick=shareDay;
 $('mRank').onclick=startRanked;$('mFriend').onclick=startFriend;
@@ -1247,7 +1264,7 @@ renderMe=function(){
    (meSec==='th'?'<p class="mut">화면 전체 색이 바뀌어요. 별콩이도 테마 옷을 입어요 (내가 고른 옷이 없을 때).</p><div class="its">'+ths+'</div>':'')+
    (meSec==='num'?'<p class="mut">판의 숫자·연산 색이에요. 레벨이 오르면 열려요.</p><div class="its">'+nums+'</div>':'')+
    (meSec==='etc'?'<div class="sec">화면 장식 (움직이지 않아요)</div><div class="its">'+decos+'</div><div class="sec">배경음악 · 젠다님 곡</div><div class="box set">'+bgm+'</div>':'')+
-   '<div class="sec">칭호</div><div class="lb">'+TITLES.map(([l,n],i)=>'<div class="lr'+(tGot(i,lv)?' me':'')+'"><span class="k">'+l+'</span><span class="nm">'+n+'</span><span class="v">'+(tGot(i,lv)?'획득':'Lv '+l)+'</span></div>').join('')+'</div>';
+   '<div class="sec">칭호 · 레벨과 실력 조건이 다 맞아야 올라가요</div><div class="lb">'+titlesHtml()+'</div>';
   const pg=$('pgMe');
   pg.querySelectorAll('[data-sec]').forEach(b=>b.onclick=()=>{meSec=b.dataset.sec;renderMe()});
   pg.querySelectorAll('[data-num]').forEach(b=>b.onclick=()=>{if(b.dataset.ok!=='1')return note('Lv '+b.dataset.l+'에 열려요');P.theme=b.dataset.num;save();applyTheme();renderMe()});
@@ -1498,7 +1515,7 @@ function aiPick(){modal('<h2>도전! 별셈왕</h2><p class="c mut">같은 판�
     '</div><div class="row"><button class="btn" id="byN">닫기</button></div>');
   $('byN').onclick=closeModal;$('ovc').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k;if(!aiOpen(k)){note(AIS[k-1].bot+'을 이기면 열려요');return}closeModal();startVs(k)})}
 $('mAi').onclick=aiPick;
-P.cs=P.cs||[];for(let k=0;k<5;k++)P.cs[k]=Object.assign({lv:1,clr:0,st:0},P.cs[k]||{});
+P.cs=P.cs||[];for(let k=0;k<5;k++)P.cs[k]=Object.assign({lv:1,clr:0,st:0},P.cs[k]||{});tCheck(true);
 const _gh5=goHome;goHome=function(){IQS=null;return _gh5.apply(this,arguments)};
 $('mIqS').onclick=startIqS;
 $('lkRooms').onclick=nfRooms;
