@@ -1027,7 +1027,7 @@ function nickEdit(){
 }
 function rules(){
   modal('<h2>이렇게 해요</h2>'+
-  '<p>판에는 <b style="color:var(--num)">숫자</b>와 <b style="color:var(--op)">연산</b> 칸이 번갈아 있어요. 숫자에서 시작해 <b>옆 칸(위·아래·왼쪽·오른쪽)</b>으로 이어 그려 <b style="color:var(--num)">목표 숫자</b>를 만드세요. 한 판에 목표는 <b>1개</b>, 그 숫자를 만드는 <b>서로 다른 길 3개</b>를 찾아요. 왼쪽 위 <b>합계</b>에 지금 값이 크게 보여요.</p>'+
+  '<p>판에는 <b style="color:var(--num)">숫자</b>와 <b style="color:var(--op)">연산</b> 칸이 번갈아 있어요. 숫자에서 시작해 <b>옆 칸(위·아래·왼쪽·오른쪽)</b>으로 이어 그려 <b style="color:var(--num)">목표 숫자</b>를 만드세요. 한 판에 목표는 <b>1개</b>, 그 숫자를 만드는 <b>서로 다른 길</b>을 찾아요(처음엔 2개, 그다음 3개). 왼쪽 위 <b>합계</b>에 지금 값이 크게 보여요.</p>'+
   '<div class="demo"><span class="on">4</span><span class="o on">+</span><span class="on">3</span><span class="o on">×</span><span class="on">2</span></div>'+
   '<p class="c" style="font-family:var(--fd);font-size:18px">4 + 3 = 7 → 7 × 2 = <span style="color:var(--num)">14</span></p>'+
   '<p>계산은 <b>앞에서부터 차례로</b> 해요 (계산기처럼). ÷는 나누어떨어질 때만 돼요. 한 칸은 한 번만 지나가요.</p>'+
@@ -1142,7 +1142,7 @@ const KL={
   rank:['proud|지금 {tier} {rp} RP! {left} RP만 더 모으면 {next}이에요','smile|랭크전 {wins}판만 이기면 {next} 승급이에요'],
   inf:['think|무한 러시 최고 {best}점! 오늘 넘어 볼까요?'],
   tap:['smile|빨리 찾는 비법? 큰 목표는 × 부터 찾아보세요','think|목표가 작으면 − 나 ÷ 가 숨어 있을 때가 많아요','wink|길게 이을수록 점수가 커요. 숫자 4개면 보너스!','happy|계산은 앞에서부터 차례로! 계산기처럼요','surprise|알고 있었어요? 마지막 칸을 다시 누르면 한 칸 지워져요','proud|저 사실 구구단 다 외워요. 별이라서요','sleepy|하암… 저 깨우려면 한 판 해 주세요','love|{nick}님이랑 노는 게 제일 좋아요'],
-  start:['excited|시작! 같은 목표, 다른 길 3개! 짧은 길부터!','smile|천천히 보면 길이 보여요. 하지만 빨리요!','wink|준비됐죠? 가 봐요!'],
+  start:['excited|시작! 같은 목표, 다른 길 찾기! 짧은 길부터!','smile|천천히 보면 길이 보여요. 하지만 빨리요!','wink|준비됐죠? 가 봐요!'],
   startLive:['excited|사람이랑 대결! 할 수 있어요!','proud|힘내세요! 응원하고 있어요','smile|침착하게! {nick}님 손이 더 빨라요'],
   solve:['happy|맞았어요!','smile|좋아요!','proud|역시!','excited|그거예요!'],
   fast:['surprise|우와, 엄청 빨라요!','excited|번개 같아요! ⚡','love|방금 거 진짜 멋있었어요'],
