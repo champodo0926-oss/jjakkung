@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="2.3"</script>
+<script>window.APP_VERSION="2.4"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -333,7 +333,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
     <div class="sec">대결</div>
     <button class="mode" id="mAi"><span class="ic" style="background:var(--op);color:#002a30">AI</span><span class="tx"><b>AI 대결</b><span>꼬마봇~제로봇 · 목표 1개 길 3개 · 5점 먼저</span></span><span class="rt" id="aiRt"></span></button>
     <button class="mode" id="mRank" hidden><span class="ic" style="background:var(--num);color:#2a1d00">R</span><span class="tx"><b>랭크전</b><span>실시간 1:1 · 5점 먼저 · 이기면 +25 RP</span></span><span class="rt" id="rankRt"></span></button>
-    <button class="mode" id="mFriend"><span class="ic" style="background:var(--ok);color:#00261a">F</span><span class="tx"><b>초대 대결</b><span>방 번호로 초대해서 실시간 1:1 · 5점 먼저</span></span><span class="rt" id="frRt"></span></button>
+    <button class="mode" id="mFriend"><span class="ic" style="background:var(--ok);color:#00261a">F</span><span class="tx"><b>한판 승부</b><span>방 번호로 초대해서 실시간 1:1 · 5점 먼저</span></span><span class="rt" id="frRt"></span></button>
     <div class="sec">혼자 하기</div>
     <button class="mode" id="mInf"><span class="ic" style="background:var(--hot);color:#2b0606">∞</span><span class="tx"><b>무한 러시</b><span>하트 3개 · 같은 4×4 판, 갈수록 어려워져요</span></span><span class="rt" id="infBest"></span></button>
     <button class="mode" id="mIq"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전</b><span>계산 판 3판 · 빠르고 힌트 없이 풀수록 높은 IQ</span></span><span class="rt" id="iqBest"></span></button>
@@ -705,7 +705,7 @@ $('bClear').onclick=()=>{if(G&&G.live){path=[];renderPath()}};
 /* ================= HUD ================= */
 function renderHud(){
   const m=G.mode,vs=m==='vs'||m==='live';
-  $('gMode').textContent=m==='vs'?'AI 대결 · '+G.ai.nm:m==='live'?(G.ranked?'랭크전':'초대 대결'):m==='inf'?'무한 러시 · '+(G.stage+1)+'판':m==='day'?'오늘의 러시 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='iq'?'IQ 도전 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='demo'?'게임 방법':m==='step'?'별셈 퍼즐 · '+AIS[G.lv].nm+' '+G.slv+'단계':'첫 문제';
+  $('gMode').textContent=m==='vs'?'AI 대결 · '+G.ai.nm:m==='live'?(G.ranked?'랭크전':'한판 승부'):m==='inf'?'무한 러시 · '+(G.stage+1)+'판':m==='day'?'오늘의 러시 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='iq'?'IQ 도전 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='demo'?'게임 방법':m==='step'?'별셈 퍼즐 · '+AIS[G.lv].nm+' '+G.slv+'단계':'첫 문제';
   $('gHp').textContent=m==='inf'?'♥'.repeat(Math.max(0,G.hp))+'♡'.repeat(Math.max(0,3-G.hp)):'';
   $('gSc').textContent=m==='iq'?'IQ '+iqRush():m==='step'?'★'.repeat(stepStars())+'☆'.repeat(3-stepStars()):G.score;
   $('vsBox').querySelectorAll('.side,.vsx').forEach(x=>x.hidden=!vs);
@@ -771,9 +771,9 @@ function finish(win){
     if(G.ranked){const d=win?25:-15,old=P.rp;P.rp=Math.max(0,P.rp+d);lines.push(['랭크 점수',(d>0?'+':'')+(P.rp-old)+' → '+P.rp]);
       const k0=tierOf(old),k1=tierOf(P.rp);if(k1>k0)lines.push(['승급',TIERS[k1][0]]);xp+=win?40:10}
     else{xp+=win?30:10;
-      /* 2.3 (젠다): 초대 대결 승패 전적 */
+      /* 2.3 (젠다): 한판 승부 승패 전적 */
       P.fr=P.fr||{w:0,l:0,log:[]};if(win)P.fr.w++;else P.fr.l++;P.fr.log.unshift({n:G.opNick||'상대',w:win?1:0,s:G.me+':'+G.op,at:Date.now()});P.fr.log=P.fr.log.slice(0,20);
-      lines.push(['초대 대결 전적',P.fr.w+'승 '+P.fr.l+'패'])}
+      lines.push(['한판 승부 전적',P.fr.w+'승 '+P.fr.l+'패'])}
     if(G.forfeit)lines.push(['','상대가 나갔어요']);
   }else if(G.mode==='iq'){
     const fr=G.fr||[],avg=fr.length?fr.reduce((a,b)=>a+b,0)/fr.length:0;
@@ -907,7 +907,7 @@ function frHist(){const f=P.fr;if(!f||!f.log.length)return '';const d=t=>{const 
   return '<div class="kv" style="margin:6px 0 10px"><span>내 전적</span><b>'+f.w+'승 '+f.l+'패</b>'+f.log.slice(0,5).map(r=>'<span>'+d(r.at)+' · '+esc(r.n)+'</span><b style="color:'+(r.w?'var(--ok)':'var(--hot)')+'">'+(r.w?'승 ':'패 ')+r.s+'</b>').join('')+'</div>'}
 async function startFriend(){
   if(!(await needOnline()))return;
-  modal('<h2>초대 대결</h2><p class="c">같은 판으로 5점 먼저 내기. 방을 만들어 초대하거나, 받은 방 번호를 넣어요.</p>'+frHist()+'<button class="btn pri wide" id="fMake">방 만들기</button><input id="fCode" inputmode="numeric" maxlength="4" placeholder="방 번호 4자리"><button class="btn wide" id="fJoin">들어가기</button><button class="btn wide" id="fX">닫기</button>');
+  modal('<h2>한판 승부</h2><p class="c">같은 판으로 5점 먼저 내기. 방을 만들어 초대하거나, 받은 방 번호를 넣어요.</p>'+frHist()+'<button class="btn pri wide" id="fMake">방 만들기</button><input id="fCode" inputmode="numeric" maxlength="4" placeholder="방 번호 4자리"><button class="btn wide" id="fJoin">들어가기</button><button class="btn wide" id="fX">닫기</button>');
   $('fX').onclick=closeModal;
   $('fMake').onclick=()=>{const code=String(1000+Math.floor(Math.random()*9000));hostFriend(code)};
   $('fJoin').onclick=()=>{const c=$('fCode').value.replace(/\D/g,'');if(c.length!==4){note('방 번호 4자리를 넣어 주세요');return}closeModal();joinRoom('F'+c,false,false)};
@@ -915,14 +915,14 @@ async function startFriend(){
 async function hostFriend(code){
   await joinRoom('F'+code,true,false);
   if(G.started)return;
-  modal('<h2>친구를 기다려요</h2><div class="code">'+code+'</div><p class="c mut">상대가 초대 대결 → 이 번호를 넣으면 시작해요</p><div class="row"><button class="btn pri" id="fShare">초대 보내기</button><button class="btn" id="fCancel">취소</button></div>');
-  $('fShare').onclick=()=>shareText('브레인 별셈 초대 대결 방 번호: '+code+'\nhttps://jjakkung-fc4b4.web.app/join?code='+code);
+  modal('<h2>상대를 기다려요</h2><div class="code">'+code+'</div><p class="c mut">상대가 한판 승부 → 이 번호를 넣으면 시작해요</p><div class="row"><button class="btn pri" id="fShare">초대 보내기</button><button class="btn" id="fCancel">취소</button></div>');
+  $('fShare').onclick=()=>shareText('브레인 별셈 한판 승부 방 번호: '+code+'\nhttps://jjakkung-fc4b4.web.app/join?code='+code);
   $('fCancel').onclick=()=>{leaveRoom();G=null;closeModal()};
 }
 window.__appJoin=c=>{if(G&&!G.done)return;closeModal();goHome();if(ONLINE())net().then(ok=>ok&&joinRoom('F'+c,false,false))};
 window.__appGo=g=>{if(G&&!G.done)return;closeModal();goHome();tab(g==='daily'?'Day':'Play')};
 async function needOnline(){
-  if(!ONLINE()){modal('<h2>앱에서 열려요</h2><p class="c">초대 대결은 인터넷으로 사람과 겨루는 거라 앱에서 할 수 있어요.</p><div class="row"><button class="btn pri" id="noA">AI와 하기</button><button class="btn" id="noB">닫기</button></div>');$('noA').onclick=()=>{closeModal();startVs(Math.min(P.beaten,4))};$('noB').onclick=closeModal;return false}
+  if(!ONLINE()){modal('<h2>앱에서 열려요</h2><p class="c">한판 승부는 인터넷으로 사람과 겨루는 거라 앱에서 할 수 있어요.</p><div class="row"><button class="btn pri" id="noA">AI와 하기</button><button class="btn" id="noB">닫기</button></div>');$('noA').onclick=()=>{closeModal();startVs(Math.min(P.beaten,4))};$('noB').onclick=closeModal;return false}
   if(!(await net())){note('인터넷 연결을 확인해 주세요');return false}
   return true;
 }
@@ -1561,7 +1561,7 @@ function rushDemo(replay){
     {t:'숫자에서 시작해 <b>옆 칸(위·아래·왼쪽·오른쪽)</b>으로 이어 그려요. 왼쪽 위 <b>합계</b>에 지금 값이 크게 나와요. <b>4 + 3</b> = 7!',ex:'think',spot:'sumBox',run:()=>{reset();draw(tA.sol.slice(0,3),0,600)}},
     {t:'계산은 <b>앞에서부터 차례로</b>, 계산기처럼요. 이어서 <b>× 2</b> 하면 7 × 2 = <b style="color:var(--num)">14</b>. 합계가 목표가 되는 순간 정답이에요!',ex:'proud',spot:'sumBox',run:()=>{reset();path=tA.sol.slice(0,3);renderPath();draw(tA.sol,3,600,()=>got(tA))}},
     {t:'같은 14를 <b>다른 길</b>로도 만들어요. 이번엔 <b>'+ex(tB.sol)+'</b>! 이미 찾은 길은 다시 안 되고, ÷는 나누어떨어질 때만 돼요.',ex:'wink',spot:'ways',run:()=>{reset([[tA,'me']]);draw(tB.sol,0,550,()=>got(tB))}},
-    {t:'AI 대결·초대 대결에서는 <b style="color:var(--hot)">상대도 같은 판</b>에서 길을 찾아요. 빨간 길은 상대가 먼저 찾은 길이에요. <b>5점</b> 먼저 내면 승리! 빨리, 연속으로(콤보) 찾을수록 점수가 커요.',ex:'surprise',spot:'ways',run:()=>{reset([[tA,'me'],[tB,'me']]);coAt(500,()=>{tC.who='op';tC.key=keyOf(tC.sol);sLose();renderHud();flashOp(tC.sol);toast('상대 득점','var(--hot)')})}},
+    {t:'AI 대결·한판 승부에서는 <b style="color:var(--hot)">상대도 같은 판</b>에서 길을 찾아요. 빨간 길은 상대가 먼저 찾은 길이에요. <b>5점</b> 먼저 내면 승리! 빨리, 연속으로(콤보) 찾을수록 점수가 커요.',ex:'surprise',spot:'ways',run:()=>{reset([[tA,'me'],[tB,'me']]);coAt(500,()=>{tC.who='op';tC.key=keyOf(tC.sol);sLose();renderHud();flashOp(tC.sol);toast('상대 득점','var(--hot)')})}},
     {t:'이제 직접 해 보세요! <b>4</b>에서 시작해 <b>+ 3 × 2</b>로 <b style="color:var(--num)">14</b>를 만들어요.',ex:'excited',btn:'직접 해 보기',run:()=>reset([[tA,'me'],[tB,'me'],[tC,'op']])}
   ],()=>{startTut()},()=>{if(replay){goHome();return}P.seen=1;save();goHome()});
 }
