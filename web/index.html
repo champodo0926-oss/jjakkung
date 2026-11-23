@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="2.0"</script>
+<script>window.APP_VERSION="2.1"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -325,12 +325,13 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
       <div class="xptx"><span id="pXpT">0 / 120 XP</span><span id="pNext">다음 칭호 Lv 5</span></div>
     </div>
     <button class="kongh" id="kongHome" aria-label="큐와 별콩이"><span class="kong-f" data-who="q"></span><span class="kong-f sm2"></span><span class="kbub" id="kongTx">안녕하세요! 저는 별콩이예요.</span></button>
-    <div class="sec">단계 · 계산 대결과 별자리 퍼즐이 같은 단계로 올라가요</div>
+    <div class="sec">단계 · 별셈 퍼즐과 별자리 퍼즐이 같은 단계로 올라가요</div>
     <div class="ai-row" id="aiRow"></div>
-    <div class="duo"><button class="mode" id="mLvCalc"><span class="ic" style="background:var(--num);color:#2a1d00">+</span><span class="tx"><b>계산 대결</b><span id="lvCalcT"></span></span><span class="rt" id="lvCalcR"></span></button>
+    <div class="duo"><button class="mode" id="mLvCalc"><span class="ic" style="background:var(--num);color:#2a1d00">+</span><span class="tx"><b>별셈 퍼즐</b><span id="lvCalcT"></span></span><span class="rt" id="lvCalcR"></span></button>
     <button class="mode" id="mLvStar"><span class="ic" style="background:#ffd84d;color:#5a3a00">★</span><span class="tx"><b>별자리 퍼즐</b><span id="lvStarT"></span></span><span class="rt" id="lvStarR"></span></button></div>
     <div class="lvlinks"><button id="lkRule">계산 규칙</button><button id="lkRooms">퍼즐 방 전체</button></div>
-    <div class="sec">사람과 대결</div>
+    <div class="sec">대결</div>
+    <button class="mode" id="mAi"><span class="ic" style="background:var(--op);color:#002a30">AI</span><span class="tx"><b>AI 대결</b><span>꼬마봇~제로봇 · 목표 1개 길 3개 · 5점 먼저</span></span><span class="rt" id="aiRt"></span></button>
     <button class="mode" id="mRank"><span class="ic" style="background:var(--num);color:#2a1d00">R</span><span class="tx"><b>랭크전</b><span>실시간 1:1 · 5점 먼저 · 이기면 +25 RP</span></span><span class="rt" id="rankRt"></span></button>
     <button class="mode" id="mFriend"><span class="ic" style="background:var(--ok);color:#00261a">F</span><span class="tx"><b>친구 대결</b><span>방 번호로 가족·친구와 같은 문제 대결</span></span></button>
     <div class="sec">혼자 하기</div>
@@ -578,12 +579,13 @@ function timeUp(){
   T.nx=setTimeout(afterRound,1900);
 }
 function boardDone(){G.live=false;clearT();freezeFuse();
+  if(G.mode==='step')return stepWin();
   if(G.mode==='iq'){const sec=(performance.now()-G.t0)/1000;G.res.push({ok:true,sec,v:iqPzVal(sec,IQ_LIM[G.stage],0,G.hints)});renderHud();sBig();toast('판 완성!','var(--num)','IQ '+iqRush());G.stage++;T.nx=setTimeout(afterRound,1400);return}
   G.stage++;T.nx=setTimeout(afterRound,1100)}
-function iqHint(){if(!G||G.mode!=='iq'||!G.live)return;if(G.hints<=0)return note('IQ 도전에서는 힌트가 1번이에요');
+function iqHint(){if(G&&G.mode==='step')return stepHint();if(!G||G.mode!=='iq'||!G.live)return;if(G.hints<=0)return note('IQ 도전에서는 힌트가 1번이에요');
   const used=new Set(G.pz.T.map(t=>t.key).filter(Boolean)),w=G.pz.ways.find(x=>!used.has(x.key));if(!w)return;
   G.hints--;const kids=$('board').children;w.p.slice(0,3).forEach(i=>kids[i].classList.add('tip'));sTap();renderHud();
-  note('💡 빛나는 '+G.pz.B.cells[w.p[0]].v+' '+G.pz.B.cells[w.p[1]].v+' '+G.pz.B.cells[w.p[2]].v+'(으)로 시작해 보세요')}
+  const C=G.pz.B.cells;$('expr').innerHTML='<span class="e">💡</span><span class="h">빛나는 <b style="color:var(--fg)">'+C[w.p[0]].v+' '+C[w.p[1]].v+' '+C[w.p[2]].v+'</b>부터 시작해 보세요</span>'}
 function iqSkip(){if(!G||G.mode!=='iq'||!G.live)return;
   modal('<h2>이 판을 넘길까요?</h2><p class="c">넘기면 이 판은 실패로 쳐요.</p><div class="row"><button class="btn pri" id="qNo">계속 찾기</button><button class="btn" id="qYes">넘기기</button></div>');
   $('qNo').onclick=closeModal;$('qYes').onclick=()=>{closeModal();if(!G||!G.live)return;const sec=(performance.now()-G.t0)/1000;G.res.push({ok:false,sec,v:0});G.live=false;clearT();sLose();
@@ -701,17 +703,17 @@ $('bClear').onclick=()=>{if(G&&G.live){path=[];renderPath()}};
 /* ================= HUD ================= */
 function renderHud(){
   const m=G.mode,vs=m==='vs'||m==='live';
-  $('gMode').textContent=m==='vs'?'AI 대결 · '+G.ai.nm:m==='live'?(G.ranked?'랭크전':'친구 대결'):m==='inf'?'무한 러시 · '+(G.stage+1)+'판':m==='day'?'오늘의 러시 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='iq'?'IQ 도전 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='demo'?'게임 방법':'첫 문제';
+  $('gMode').textContent=m==='vs'?'AI 대결 · '+G.ai.nm:m==='live'?(G.ranked?'랭크전':'친구 대결'):m==='inf'?'무한 러시 · '+(G.stage+1)+'판':m==='day'?'오늘의 러시 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='iq'?'IQ 도전 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='demo'?'게임 방법':m==='step'?'별셈 퍼즐 · '+AIS[G.lv].nm+' '+G.slv+'단계':'첫 문제';
   $('gHp').textContent=m==='inf'?'♥'.repeat(Math.max(0,G.hp))+'♡'.repeat(Math.max(0,3-G.hp)):'';
-  $('gSc').textContent=m==='iq'?'IQ '+iqRush():G.score;
+  $('gSc').textContent=m==='iq'?'IQ '+iqRush():m==='step'?'★'.repeat(stepStars())+'☆'.repeat(3-stepStars()):G.score;
   $('vsBox').querySelectorAll('.side,.vsx').forEach(x=>x.hidden=!vs);
-  $('vsBox').hidden=m==='tut'||m==='demo';
+  $('vsBox').hidden=m==='tut'||m==='demo'||m==='step';
   $('fuse').className='fuse '+(m==='vs'?'fa':'ft');
   if(vs){const goal=G.goal;$('meNm').textContent=P.nick;$('opNm').textContent=m==='vs'?G.ai.bot:(G.opNick||'상대');
     $('pipMe').innerHTML=Array.from({length:goal},(_,k)=>'<i class="'+(k<G.me?'me':'')+'"></i>').join('');
     $('pipOp').innerHTML=Array.from({length:goal},(_,k)=>'<i class="'+(k<G.op?'op':'')+'"></i>').join('')}
   if(G.pz){$('tgt').textContent=G.pz.v;const n=G.pz.T.length;$('ways').innerHTML=n>1?G.pz.T.map(t=>'<i class="'+(t.who||'')+'"></i>').join('')+'<small>'+G.pz.T.filter(t=>t.who==='me').length+'/'+n+'</small>':''}
-  $('bHint').hidden=$('bSkip').hidden=m!=='iq';if(m==='iq')$('bHint').textContent='💡 힌트 '+G.hints;
+  $('bSkip').hidden=m!=='iq';$('bHint').hidden=m!=='iq'&&m!=='step';if(m==='iq')$('bHint').textContent='💡 힌트 '+G.hints;if(m==='step')$('bHint').textContent='💡 힌트';
   const cb=$('combo');cb.textContent='콤보 x'+G.combo;cb.classList.toggle('on',G.combo>1);
 }
 function toast(t,col,sub,sm){const el=$('toast');el.className='toast'+(sm?' sm':'');el.innerHTML=t+(sub?'<small>'+sub+'</small>':'');el.style.color=col;void el.offsetWidth;el.classList.add('go')}
@@ -1460,6 +1462,29 @@ function iqRFinish(){clearT();G.live=false;G.done=1;const R=G.res,iq=iqRush(),be
   $('rAgain').onclick=()=>{closeModal();maybeInter('iq',startIq)};$('rHome').onclick=()=>{closeModal();maybeInter('iq',goHome)};
   $('rShare').onclick=()=>shareText('브레인 별셈 IQ 도전 · 계산 대결\n내 IQ '+iq+' (재미로 보는 점수)\n나보다 높게 나올 수 있어요?\nhttps://jjakkung-fc4b4.web.app')}
 $('bHint').onclick=iqHint;$('bSkip').onclick=iqSkip;
+function startStep(k){const cs=P.cs[k];setRnd(hashStr('cs'+k+'#'+cs.lv));const pz=makeBoard(AIS[k].tg,K_PER);setRnd(null);
+  G={mode:'step',lv:k,slv:cs.lv,hu:0,score:0,combo:0,best:0,solved:0,stage:0};begin(pz,0);say('start')}
+function stepStars(){return Math.max(1,3-(G.hu||0))}
+function stepHint(){if(!G||!G.live)return;const used=new Set(G.pz.T.map(t=>t.key).filter(Boolean)),w=G.pz.ways.find(x=>!used.has(x.key));if(!w)return;
+  const kids=$('board').children,C=G.pz.B.cells,full=G.hintKey===w.key;G.hintKey=w.key;G.hu++;
+  (full?w.p:w.p.slice(0,3)).forEach(i=>kids[i].classList.add('tip'));sTap();renderHud();
+  $('expr').innerHTML='<span class="e">💡</span><span class="h">'+(full?'빛나는 길을 그대로 이어 보세요':'빛나는 <b style="color:var(--fg)">'+C[w.p[0]].v+' '+C[w.p[1]].v+' '+C[w.p[2]].v+'</b>부터 시작해 보세요 · 힌트를 한 번 더 누르면 길 전체')+'</span>'}
+function stepWin(){const k=G.lv,cs=P.cs[k],stars=stepStars(),before=lvOf(P.xp),xp=Math.round(G.score/10)+10+k*5,coins=1+k+stars,slv=cs.lv;
+  cs.lv++;cs.clr++;cs.st+=stars;P.games++;P.wins++;P.coins+=coins;addXp(xp);save();syncOnline();notiSync();sBig();G.done=1;
+  const after=lvOf(P.xp),nx=NF_ROOMS[k+1],opened=nx&&!UNLOCK()&&cs.clr===nx.need&&!nfRoomOpen(k+1);
+  let extra='';if(after.lv>before.lv)extra+='<p class="c" style="color:var(--num);font-family:var(--fd);font-size:18px">레벨 업! Lv '+after.lv+'</p>';
+  if(opened)extra+='<p class="c"><b>'+AIS[k+1].nm+'</b> 단계가 열렸어요!</p>';
+  T.nx=setTimeout(()=>{modal('<h2>'+slv+'단계 완성!</h2><div class="big" style="letter-spacing:4px">'+'★'.repeat(stars)+'<span style="opacity:.25">'+'★'.repeat(3-stars)+'</span></div>'+
+    '<div class="kv"><span>단계</span><b>'+NF_ROOMS[k].emo+' '+AIS[k].nm+' '+slv+'단계</b><span>점수</span><b>'+G.score+'</b><span>힌트</span><b>'+G.hu+'번</b><span>얻은 경험치</span><b>+'+xp+' XP</b><span>얻은 별</span><b>★'+coins+' (가진 별 ★'+P.coins+')</b></div>'+extra+
+    '<div class="row"><button class="btn pri" id="rNext">다음 단계 ▶ '+cs.lv+'단계</button><button class="btn" id="rHome">홈으로</button></div>');
+    say(after.lv>before.lv?'lvup':'win',null,1);
+    $('rNext').onclick=()=>{closeModal();maybeInter('nf',()=>startStep(k))};$('rHome').onclick=()=>{closeModal();maybeInter('nf',goHome)}},900)}
+function aiPick(){modal('<h2>AI 대결</h2><p class="c mut">같은 판에서 길을 먼저 찾으면 1점, 5점 먼저 내면 승리!</p><div class="lb">'+AIS.map((a,k)=>{const op=aiOpen(k);
+    return '<button class="mode'+(op?'':' lock')+'" data-k="'+k+'" style="padding:9px 12px'+(op?'':';opacity:.5')+'"><span class="ic" style="background:var(--panel2);font-size:15px">'+a.nm+'</span><span class="tx"><b>'+a.bot+'</b><span>'+(a.tg.ops.split('').join(' '))+' · 4×4 판</span></span><span class="rt">'+(k<P.beaten?'이김 ✓':op?'':AIS[k-1].bot+'을<br>이기면')+'</span></button>'}).join('')+
+    '</div><div class="row"><button class="btn" id="byN">닫기</button></div>');
+  $('byN').onclick=closeModal;$('ovc').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k;if(!aiOpen(k)){note(AIS[k-1].bot+'을 이기면 열려요');return}closeModal();startVs(k)})}
+$('mAi').onclick=aiPick;
+P.cs=P.cs||[];for(let k=0;k<5;k++)P.cs[k]=Object.assign({lv:1,clr:0,st:0},P.cs[k]||{});
 const _gh5=goHome;goHome=function(){IQS=null;return _gh5.apply(this,arguments)};
 $('mIqS').onclick=startIqS;
 $('lkRooms').onclick=nfRooms;
@@ -1469,18 +1494,21 @@ Object.assign(KL,{nfStart:['smile|빈 동그라미부터 하나씩 채워 봐요
   nfWin:['love|별자리 완성! 정말 예뻐요','excited|다 켜졌어요! 최고예요','proud|역시! 다음 단계도 가 봐요']});
 /* 1.8 (젠다): 단계 하나로 묶기. 초보=새싹방 … 마스터=고수방. 고른 단계에서 계산 대결·별자리 퍼즐 둘 다 해요 */
 function aiOpen(k){return UNLOCK()||k<=P.beaten}
-function lvOpen(k){return aiOpen(k)||nfRoomOpen(k)}
+/* 2.1 (젠다): 별셈 퍼즐 = 혼자, 시간 제한 없이 단계(1단계, 2단계…)로 올라가는 계산 판. 단계 여는 조건은 별자리 퍼즐 방과 같아요 */
+function csOpen(k){if(!k||UNLOCK())return true;return P.cs[k-1].clr>=NF_ROOMS[k].need}
+function lvOpen(k){return csOpen(k)||nfRoomOpen(k)}
 const _rp2=renderPlay;renderPlay=function(){const r=_rp2.apply(this,arguments);
   let k=P.lvSel;if(k==null||!lvOpen(k)){k=0;for(let i=0;i<AIS.length;i++)if(lvOpen(i))k=i}
   $('aiRow').innerHTML=AIS.map((a,i)=>{const op=lvOpen(i),done=i<P.beaten&&P.sp[NF_ROOMS[i].id].clr>=(NF_ROOMS[i+1]?NF_ROOMS[i+1].need:1);
-    return '<button class="ai'+(op?'':' lock')+(i===k?' sel':'')+(i<P.beaten?' won':'')+'" data-k="'+i+'">'+a.nm+'<small>'+(op?NF_ROOMS[i].emo+' '+a.bot:'잠김')+'</small></button>'}).join('');
-  $('aiRow').querySelectorAll('.ai').forEach(b=>b.onclick=()=>{const i=+b.dataset.k;if(!lvOpen(i)){note(AIS[i-1].bot+'을 이기거나 '+NF_ROOMS[i-1].nm+'에서 '+NF_ROOMS[i].need+'판 깨면 열려요');return}P.lvSel=i;save();sTap();renderPlay()});
-  const a=AIS[k],rm=NF_ROOMS[k],sp=P.sp[rm.id],ao=aiOpen(k),so=nfRoomOpen(k);
-  $('lvCalcT').textContent=ao?a.bot+'과 대결 · 목표 1개 길 3개 · 5점 먼저':AIS[k-1].bot+'을 이기면 열려요';
-  $('lvCalcR').innerHTML=k<P.beaten?'이김 ✓':'';$('mLvCalc').classList.toggle('lock',!ao);
+    return '<button class="ai'+(op?'':' lock')+(i===k?' sel':'')+'" data-k="'+i+'">'+a.nm+'<small>'+(op?NF_ROOMS[i].emo:'잠김')+'</small></button>'}).join('');
+  $('aiRow').querySelectorAll('.ai').forEach(b=>b.onclick=()=>{const i=+b.dataset.k;if(!lvOpen(i)){note(AIS[i-1].nm+' 단계에서 '+NF_ROOMS[i].need+'판 깨면 열려요');return}P.lvSel=i;save();sTap();renderPlay()});
+  const a=AIS[k],rm=NF_ROOMS[k],sp=P.sp[rm.id],cs=P.cs[k],ao=csOpen(k),so=nfRoomOpen(k);
+  $('lvCalcT').textContent=ao?a.nm+' · 목표 1개 길 3개 · 시간 제한 없이 천천히':AIS[k-1].nm+' 별셈 퍼즐 '+rm.need+'판 깨면 열려요';
+  $('lvCalcR').innerHTML=ao?cs.lv+'단계<br><span class="mut">★'+cs.st+'</span>':'';$('mLvCalc').classList.toggle('lock',!ao);
   $('lvStarT').textContent=so?rm.emo+' '+rm.nm+' '+rm.n+'×'+rm.n+' · 시간 제한 없이 천천히':NF_ROOMS[k-1].nm+'에서 '+rm.need+'판 깨면 열려요';
   $('lvStarR').innerHTML=so?sp.lv+'단계<br><span class="mut">★'+sp.st+'</span>':'';$('mLvStar').classList.toggle('lock',!so);
-  $('mLvCalc').onclick=()=>{if(!ao){note($('lvCalcT').textContent);return}startVs(k)};
+  $('mLvCalc').onclick=()=>{if(!ao){note($('lvCalcT').textContent);return}startStep(k)};
+  $('aiRt').innerHTML=P.beaten?'이긴 AI<br><span class="mut">'+P.beaten+'/'+AIS.length+'</span>':'';
   $('mLvStar').onclick=()=>{if(!so){note($('lvStarT').textContent);return}nfStart(rm.id)};
   return r};
 $('lkRule').onclick=()=>{if(typeof rules==='function')rules();else settings()};
