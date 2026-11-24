@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="2.7"</script>
+<script>window.APP_VERSION="2.8"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -91,6 +91,7 @@ input{font-family:var(--fd);font-size:18px;background:var(--ink);color:var(--fg)
 .lr .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lr .nm small{color:var(--mute);margin-left:6px;font-size:12px}
 .lr .v{font-family:var(--fd);color:var(--num);font-variant-numeric:tabular-nums}
+.goal .dif{display:block;font-style:normal;color:var(--num);font-size:15px;letter-spacing:1px;white-space:nowrap;margin-top:2px}
 .lr.tl .nm{white-space:normal}
 .lr .tc{display:block;font-size:12px;line-height:1.5;margin-top:2px;text-align:left;border:0;padding:0;background:none;font-family:var(--fb)}
 .lr.nx{border:1px dashed var(--num)}
@@ -336,7 +337,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
     <div class="sec">대결</div>
     <button class="mode" id="mAi"><span class="ic" style="background:var(--op);color:#002a30">👑</span><span class="tx"><b>도전! 별셈왕</b><span>꼬마봇~제로봇 · 목표 1개 길 3개 · 5점 먼저</span></span><span class="rt" id="aiRt"></span></button>
     <button class="mode" id="mRank" hidden><span class="ic" style="background:var(--num);color:#2a1d00">R</span><span class="tx"><b>랭크전</b><span>실시간 1:1 · 5점 먼저 · 이기면 +25 RP</span></span><span class="rt" id="rankRt"></span></button>
-    <button class="mode" id="mFriend"><span class="ic" style="background:var(--ok);color:#00261a">F</span><span class="tx"><b>한판 승부</b><span>방 번호로 초대해서 실시간 1:1 · 5점 먼저</span></span><span class="rt" id="frRt"></span></button>
+    <button class="mode" id="mFriend"><span class="ic" style="background:var(--ok);color:#00261a">F</span><span class="tx"><b>한판 승부</b><span>방 번호로 초대해서 실시간 1:1 · 5판 3선승</span></span><span class="rt" id="frRt"></span></button>
     <div class="sec">혼자 하기</div>
     <button class="mode" id="mInf"><span class="ic" style="background:var(--hot);color:#2b0606">∞</span><span class="tx"><b>무한 러시</b><span>하트 3개 · 같은 4×4 판, 갈수록 어려워져요</span></span><span class="rt" id="infBest"></span></button>
     <button class="mode" id="mIq"><span class="ic" style="background:#c9a7ff;color:#1d0d33;font-size:18px">IQ</span><span class="tx"><b>IQ 도전</b><span>계산 판 3판 · 빠르고 힌트 없이 풀수록 높은 IQ</span></span><span class="rt" id="iqBest"></span></button>
@@ -385,7 +386,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
     <div class="side r"><span class="nm" id="opNm">AI</span><div class="pips" id="pipOp"></div></div>
     <div class="fuse fa" id="fuse"><i id="fuseI"></i></div>
   </div>
-  <div class="tgt"><div class="sum" id="sumBox"><span class="lbl">합계</span><b id="sumV">0</b></div><div class="goal"><span class="lbl">목표</span><span class="tv" id="tgt"></span><span class="ways" id="ways"></span></div><span class="cb" id="combo">콤보 x2</span></div>
+  <div class="tgt"><div class="sum" id="sumBox"><span class="lbl">합계</span><b id="sumV">0</b></div><div class="goal"><span class="lbl">목표<i class="dif" id="dif"></i></span><span class="tv" id="tgt"></span><span class="ways" id="ways"></span></div><span class="cb" id="combo">콤보 x2</span></div>
   <div class="bwrap" id="bwrap"><div class="board" id="board"></div><svg class="pl" id="pl"></svg></div>
   <div class="expr" id="expr"></div>
   <div class="ctl"><button class="btn" id="bHint" hidden>💡 힌트</button><button class="btn" id="bClear">지우기</button><button class="btn" id="bSkip" hidden>이 판 넘기기</button></div>
@@ -554,7 +555,9 @@ function soloLimit(s,min){return Math.max(16,38-s)+(min-2)*4}
 function nextPuzzle(){
   const m=G.mode;let pz,dur=0;
   if(m==='vs')pz=makeBoard(G.ai.tg,K_PER);
-  else if(m==='live'){setRnd(hashStr(G.room+'#'+G.stage));pz=makeBoard(LIVE_TG,K_PER);dur=90000}
+  else if(m==='live'){setRnd(hashStr(G.room+'#'+G.stage));
+    /* 2.8 (젠다): 한판 승부 = 5판, 판마다 목표 1개. 난이도는 판마다 무작위(초보 빼고 보통~마스터 = ★2~★5), 두 사람 같은 판 */
+    if(G.lk===1){const lv=1+Math.floor(rnd()*4);pz=makeBoard(AIS[lv].tg,1);pz.star=lv+1}else pz=makeBoard(LIVE_TG,K_PER);dur=90000}
   else if(m==='iq'){pz=makeBoard(AIS[IQ_PLAN[G.stage]].tg,K_PER);dur=0;G.t0=performance.now();G.hints=1}
   else{const s=m==='day'?G.stage*3:G.stage*2;pz=makeBoard(soloParams(s),K_PER);dur=Math.round(soloLimit(s,pz.T[0].min)*2.2)*1000}
   begin(pz,dur);
@@ -728,7 +731,7 @@ $('bClear').onclick=()=>{if(G&&G.live){path=[];renderPath()}};
 /* ================= HUD ================= */
 function renderHud(){
   const m=G.mode,vs=m==='vs'||m==='live';
-  $('gMode').textContent=m==='vs'?'도전! 별셈왕 · '+G.ai.nm:m==='live'?(G.ranked?'랭크전':'한판 승부'):m==='inf'?'무한 러시 · '+(G.stage+1)+'판':m==='day'?'오늘의 러시 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='iq'?'IQ 도전 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='demo'?'게임 방법':m==='step'?'별셈 퍼즐 · '+AIS[G.lv].nm+' '+G.slv+'단계':'첫 문제';
+  $('gMode').textContent=m==='vs'?'도전! 별셈왕 · '+G.ai.nm:m==='live'?(G.ranked?'랭크전':'한판 승부 · '+Math.min(G.stage+1,5)+'/5판'):m==='inf'?'무한 러시 · '+(G.stage+1)+'판':m==='day'?'오늘의 러시 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='iq'?'IQ 도전 · '+Math.min(G.stage+1,G.total)+'/'+G.total:m==='demo'?'게임 방법':m==='step'?'별셈 퍼즐 · '+AIS[G.lv].nm+' '+G.slv+'단계':'첫 문제';
   $('gHp').textContent=m==='inf'?'♥'.repeat(Math.max(0,G.hp))+'♡'.repeat(Math.max(0,3-G.hp)):'';
   $('gSc').textContent=m==='iq'?'IQ '+iqRush():m==='step'?'★'.repeat(stepStars())+'☆'.repeat(3-stepStars()):G.score;
   $('vsBox').querySelectorAll('.side,.vsx').forEach(x=>x.hidden=!vs);
@@ -737,7 +740,7 @@ function renderHud(){
   if(vs){const goal=G.goal;$('meNm').textContent=P.nick;$('opNm').textContent=m==='vs'?G.ai.bot:(G.opNick||'상대');
     $('pipMe').innerHTML=Array.from({length:goal},(_,k)=>'<i class="'+(k<G.me?'me':'')+'"></i>').join('');
     $('pipOp').innerHTML=Array.from({length:goal},(_,k)=>'<i class="'+(k<G.op?'op':'')+'"></i>').join('')}
-  if(G.pz){$('tgt').textContent=G.pz.v;const n=G.pz.T.length;$('ways').innerHTML=n>1?G.pz.T.map(t=>'<i class="'+(t.who||'')+'"></i>').join('')+'<small>'+G.pz.T.filter(t=>t.who==='me').length+'/'+n+'</small>':''}
+  if(G.pz){const ds=G.pz.star||(m==='vs'?G.lv+1:m==='step'?G.lv+1:0);$('dif').textContent=ds?'★'.repeat(ds)+'☆'.repeat(5-ds):'';$('tgt').textContent=G.pz.v;const n=G.pz.T.length;$('ways').innerHTML=n>1?G.pz.T.map(t=>'<i class="'+(t.who||'')+'"></i>').join('')+'<small>'+G.pz.T.filter(t=>t.who==='me').length+'/'+n+'</small>':''}
   $('bSkip').hidden=m!=='iq';$('bHint').hidden=m!=='iq'&&m!=='step';if(m==='iq')$('bHint').textContent='💡 힌트 '+G.hints;if(m==='step')$('bHint').textContent='💡 힌트';
   const cb=$('combo');cb.textContent='콤보 x'+G.combo;cb.classList.toggle('on',G.combo>1);
 }
@@ -789,14 +792,14 @@ function finish(win){
     head='오늘의 러시 완료';
     lines=[['점수',G.score],['찾은 길',G.solved+' / '+G.total*K_PER],['최고 콤보',G.best],['연속 출석',P.streak.n+'일']];
   }else if(G.mode==='live'){
-    head=win?'승리!':'아쉬워요';P.wins+=win?1:0;
-    lines=[['찾은 길',G.me+' : '+G.op],['점수',G.score]];
+    head=G.draw?'무승부':win?'승리!':'아쉬워요';P.wins+=win?1:0;
+    lines=[[G.lk===1?'이긴 판':'찾은 길',G.me+' : '+G.op],['점수',G.score]];
     if(G.ranked){const d=win?25:-15,old=P.rp;P.rp=Math.max(0,P.rp+d);lines.push(['랭크 점수',(d>0?'+':'')+(P.rp-old)+' → '+P.rp]);
       const k0=tierOf(old),k1=tierOf(P.rp);if(k1>k0)lines.push(['승급',TIERS[k1][0]]);xp+=win?40:10}
     else{xp+=win?30:10;
       /* 2.3 (젠다): 한판 승부 승패 전적 */
-      P.fr=P.fr||{w:0,l:0,log:[]};if(win)P.fr.w++;else P.fr.l++;P.fr.log.unshift({n:G.opNick||'상대',w:win?1:0,s:G.me+':'+G.op,at:Date.now()});P.fr.log=P.fr.log.slice(0,20);
-      lines.push(['한판 승부 전적',P.fr.w+'승 '+P.fr.l+'패'])}
+      P.fr=P.fr||{w:0,l:0,log:[]};P.fr.d=P.fr.d||0;if(G.draw)P.fr.d++;else if(win)P.fr.w++;else P.fr.l++;P.fr.log.unshift({n:G.opNick||'상대',w:G.draw?2:win?1:0,s:G.me+':'+G.op,at:Date.now()});P.fr.log=P.fr.log.slice(0,20);
+      lines.push(['한판 승부 전적',frRec()])}
     if(G.forfeit)lines.push(['','상대가 나갔어요']);
   }else if(G.mode==='iq'){
     const fr=G.fr||[],avg=fr.length?fr.reduce((a,b)=>a+b,0)/fr.length:0;
@@ -860,7 +863,7 @@ let ROOM=null,mmTimer=null,mmDoc=null;
    Host is the referee; guest sends its claims as "stage.idx" list in presence.cl */
 async function joinRoom(code,host,ranked,opNick){
   const R=await (await claude.use('room')).join(code);ROOM=R;
-  G={mode:'live',room:code,host,ranked,stage:0,me:0,op:0,goal:5,score:0,combo:0,best:0,solved:0,res:'',cl:'',opNick:opNick||'',started:0,seen:{},pend:{}};
+  G={mode:'live',room:code,host,ranked,lk:ranked?K_PER:1,rounds:ranked?0:5,stage:0,me:0,op:0,goal:ranked?5:3,score:0,combo:0,best:0,solved:0,res:'',cl:'',opNick:opNick||'',started:0,seen:{},pend:{}};
   R.presence({n:P.nick.slice(0,12),rp:P.rp,host:host?1:0,res:'',cl:''});
   R.onPeers(onPeers);onPeers();
 }
@@ -871,32 +874,35 @@ function onPeers(){
   if(!op){if(G.started&&!T.gone)T.gone=setTimeout(()=>{if(G&&G.mode==='live'&&!G.done&&!opPeer()){G.forfeit=1;liveEnd(true)}},8000);return}
   if(T.gone){clearTimeout(T.gone);delete T.gone}
   const pr=op.presence||{};if(pr.n)G.opNick=pr.n;
-  if(!G.started){G.started=1;closeModal();modal('<h2>상대를 찾았어요</h2><p class="c" style="font-family:var(--fd);font-size:20px">'+esc(P.nick)+' <span class="mut">VS</span> '+esc(G.opNick)+'</p><p class="c mut">한 판에 길 3개 · 5점 먼저 내면 이겨요</p>');sBig();
+  if(!G.started){G.started=1;closeModal();modal('<h2>상대를 찾았어요</h2><p class="c" style="font-family:var(--fd);font-size:20px">'+esc(P.nick)+' <span class="mut">VS</span> '+esc(G.opNick)+'</p><p class="c mut">'+(G.lk===1?'5판 · 판마다 목표 1개 · 먼저 찾으면 그 판 승리<br>3판 먼저 이기면 승리!':'한 판에 길 3개 · 5점 먼저 내면 이겨요')+'</p>');sBig();
     T.st=setTimeout(()=>{closeModal();G.stage=0;nextPuzzle()},1600);return}
   if(G.host){G.clDone=G.clDone||{};for(const c of String(pr.cl||'').split(',')){if(!c||G.clDone[c])continue;G.clDone[c]=1;const [st,i]=c.split('.').map(Number);const b=curRes(st);const j=b[i]==='.'?i:b.indexOf('.');if(j>=0)liveSetRes(st,j,'G')}}
   else{const r=pr.res||'';if(r&&r!==G.res)liveApply(r)}
 }
-function curRes(st,res){const a=(res!=null?res:G.res).split('|');return a[st]||'.'.repeat(K_PER)}
-function liveSetRes(st,i,ch){const a=G.res?G.res.split('|'):[];while(a.length<=st)a.push('.'.repeat(K_PER));const b=a[st].split('');b[i]=ch;a[st]=b.join('');G.res=a.join('|');ROOM&&ROOM.presence({res:G.res});liveApply(G.res)}
+function curRes(st,res){const a=(res!=null?res:G.res).split('|');return a[st]||'.'.repeat(G.lk||K_PER)}
+function liveSetRes(st,i,ch){const a=G.res?G.res.split('|'):[];while(a.length<=st)a.push('.'.repeat(G.lk||K_PER));const b=a[st].split('');b[i]=ch;a[st]=b.join('');G.res=a.join('|');ROOM&&ROOM.presence({res:G.res});liveApply(G.res)}
 function liveClaim(i){G.cl+=(G.cl?',':'')+G.stage+'.'+i;ROOM&&ROOM.presence({cl:G.cl})}
 function liveDecide(i,who){if(!G.host)return;const b=curRes(G.stage),j=b[i]==='.'?i:b.indexOf('.');if(j>=0)liveSetRes(G.stage,j,who);else liveApply(G.res)}
 function liveTimeout(){if(!G.host)return;const st=G.stage,b=curRes(st);if(!b.includes('.'))return;
-  const a=G.res?G.res.split('|'):[];while(a.length<=st)a.push('.'.repeat(K_PER));a[st]=b.replace(/\./g,'-');G.res=a.join('|');ROOM&&ROOM.presence({res:G.res});liveApply(G.res)}
+  const a=G.res?G.res.split('|'):[];while(a.length<=st)a.push('.'.repeat(G.lk||K_PER));a[st]=b.replace(/\./g,'-');G.res=a.join('|');ROOM&&ROOM.presence({res:G.res});liveApply(G.res)}
 function liveApply(res){
   if(!G||G.done)return;G.res=res;if(!G.pz||G.pzStage!==G.stage)return;
   const st=G.stage,b=curRes(st,res);let changed=false;
-  for(let i=0;i<K_PER;i++){const ch=b[i],key=st+'.'+i;if(ch==='.'||G.seen[key])continue;G.seen[key]=1;changed=true;const t=G.pz.T[i];
+  for(let i=0;i<(G.lk||K_PER);i++){const ch=b[i],key=st+'.'+i;if(ch==='.'||G.seen[key])continue;G.seen[key]=1;changed=true;const t=G.pz.T[i];
     if(ch==='-'){t.who='x';continue}
     const mine=(ch==='H')===G.host;
-    if(mine){t.who='me';G.me++;toast('+1점','var(--num)',G.pend[key]?'+'+G.pend[key]:'')}
-    else{const mineLost=!!G.pend[key];if(mineLost){G.score-=G.pend[key];G.combo=0;t.key=null}t.who='op';G.op++;sLose();buzz(40);toast(esc(G.opNick||'상대')+' 득점','var(--hot)');if(!mineLost)flashOp(t.sol)}
+    if(mine){t.who='me';G.me++;toast(G.lk===1?'이 판 승리!':'+1점','var(--num)',G.pend[key]?'+'+G.pend[key]:'')}
+    else{const mineLost=!!G.pend[key];if(mineLost){G.score-=G.pend[key];G.combo=0;t.key=null}t.who='op';G.op++;sLose();buzz(40);toast(esc(G.opNick||'상대')+(G.lk===1?'가 먼저 찾았어요':' 득점'),'var(--hot)');if(!mineLost)flashOp(t.sol)}
     delete G.pend[key]}
   if(!changed)return;
   renderHud();if(!T.fl)renderPath();
   if(G.endAt===st)return;
   if(G.me>=G.goal||G.op>=G.goal){G.endAt=st;G.live=false;clearT();freezeFuse();const w=G.me>=G.goal;T.nx=setTimeout(()=>liveEnd(w),1400);return}
+  if(G.rounds&&!b.includes('.')&&st+1<G.rounds){G.endAt=st;G.live=false;clearT();freezeFuse();T.nx=setTimeout(()=>{if(!G||G.done)return;G.stage++;nextPuzzle()},G.pz.T[0].who==='x'?1900:1500);
+    if(G.pz.T[0].who==='x'){toast('시간 끝','var(--fg)');showOpPath(G.pz.T[0].sol,'아무도 못 찾았어요 · 이런 길이 있었어요',G.pz.v)}return}
   if(!b.includes('.')){G.endAt=st;G.live=false;clearT();freezeFuse();
     const miss=G.pz.T.filter(t=>t.who==='x');if(miss.length){toast('시간 끝','var(--fg)');showOpPath(miss[0].sol,'아무도 못 찾은 목표 '+miss.map(t=>t.v).join(', '),miss[0].v)}
+    if(G.rounds&&st+1>=G.rounds){const w=G.me>G.op;if(G.me===G.op)G.draw=1;T.nx=setTimeout(()=>liveEnd(w),1600);return}
     T.nx=setTimeout(()=>{if(!G||G.done)return;G.stage++;nextPuzzle()},1500)}
 }
 function liveEnd(win){leaveRoom();finish(win)}
@@ -926,11 +932,12 @@ async function startRanked(){
   mmStop._w=stopWatch;
 }
 function mmStop(keep){clearTimeout(mmTimer);mmTimer=null;try{mmStop._w&&mmStop._w()}catch(e){}mmStop._w=null;if(mmDoc){try{mmDoc.remove()}catch(e){}mmDoc=null}}
+function frRec(){const f=P.fr||{w:0,l:0};return f.w+'승 '+(f.d?f.d+'무 ':'')+f.l+'패'}
 function frHist(){const f=P.fr;if(!f||!f.log.length)return '';const d=t=>{const x=new Date(t);return (x.getMonth()+1)+'/'+x.getDate()};
-  return '<div class="kv" style="margin:6px 0 10px"><span>내 전적</span><b>'+f.w+'승 '+f.l+'패</b>'+f.log.slice(0,5).map(r=>'<span>'+d(r.at)+' · '+esc(r.n)+'</span><b style="color:'+(r.w?'var(--ok)':'var(--hot)')+'">'+(r.w?'승 ':'패 ')+r.s+'</b>').join('')+'</div>'}
+  return '<div class="kv" style="margin:6px 0 10px"><span>내 전적</span><b>'+frRec()+'</b>'+f.log.slice(0,5).map(r=>'<span>'+d(r.at)+' · '+esc(r.n)+'</span><b style="color:'+(r.w===1?'var(--ok)':r.w===2?'var(--fg)':'var(--hot)')+'">'+(r.w===1?'승 ':r.w===2?'무 ':'패 ')+r.s+'</b>').join('')+'</div>'}
 async function startFriend(){
   if(!(await needOnline()))return;
-  modal('<h2>한판 승부</h2><p class="c">같은 판으로 5점 먼저 내기. 방을 만들어 초대하거나, 받은 방 번호를 넣어요.</p>'+frHist()+'<button class="btn pri wide" id="fMake">방 만들기</button><input id="fCode" inputmode="numeric" maxlength="4" placeholder="방 번호 4자리"><button class="btn wide" id="fJoin">들어가기</button><button class="btn wide" id="fX">닫기</button>');
+  modal('<h2>한판 승부</h2><p class="c">5판 동안 같은 판에서 목표 숫자 1개를 누가 먼저 찾나! 3판 먼저 이기면 승리. 판마다 난이도(★2~★5)는 무작위예요.</p><p class="c mut">방을 만들어 초대하거나, 받은 방 번호를 넣어요.</p>'+frHist()+'<button class="btn pri wide" id="fMake">방 만들기</button><input id="fCode" inputmode="numeric" maxlength="4" placeholder="방 번호 4자리"><button class="btn wide" id="fJoin">들어가기</button><button class="btn wide" id="fX">닫기</button>');
   $('fX').onclick=closeModal;
   $('fMake').onclick=()=>{const code=String(1000+Math.floor(Math.random()*9000));hostFriend(code)};
   $('fJoin').onclick=()=>{const c=$('fCode').value.replace(/\D/g,'');if(c.length!==4){note('방 번호 4자리를 넣어 주세요');return}closeModal();joinRoom('F'+c,false,false)};
@@ -972,7 +979,7 @@ function renderPlay(){
 
   $('infBest').textContent=P.best?'최고 '+P.best:'';$('iqBest').textContent=P.iq?'최고 IQ '+P.iq:'';$('iqSBest').textContent=P.iqS?'최고 IQ '+P.iqS:'';
   $('rankRt').innerHTML=TIERS[tierOf(P.rp)][0]+'<br><span class="mut">'+P.rp+' RP</span>';
-  $('frRt').innerHTML=P.fr&&(P.fr.w+P.fr.l)?P.fr.w+'승 '+P.fr.l+'패':'';
+  $('frRt').innerHTML=P.fr&&(P.fr.w+P.fr.l+(P.fr.d||0))?frRec():'';
 }
 function renderDay(){
   const k=todayKey();$('dStreak').textContent=P.streak.last===k||isYesterday(P.streak.last)?P.streak.n:0;$('dToday').textContent=P.day[k]||'-';
