@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="2.8"</script>
+<script>window.APP_VERSION="2.9"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -427,8 +427,31 @@ function adsRemoved(){if(P.adsOff)return true;try{return !!(APP&&APP.adsRemoved&
 
 /* ================= sound: tone() from 별잇기 ================= */
 let ac=null;
-function tone(f,d=.09,type='triangle',vol=.1,delay=0){if(!P.snd)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();const t=ac.currentTime+delay,o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g).connect(ac.destination);o.start(t);o.stop(t+d+.02)}catch(e){}}
-const sTap=()=>tone(660,.05,'triangle',.06), sWin=()=>{tone(784,.1);tone(1046,.14,'triangle',.1,.08)}, sLose=()=>{tone(300,.16,'sawtooth',.05);tone(220,.2,'sawtooth',.05,.12)}, sBig=()=>{tone(660,.1);tone(880,.1,'triangle',.1,.1);tone(1320,.2,'triangle',.1,.2)};
+/* 2.9 효과음: 직접 합성한 마림바·벨 소리 + 작은 잔향. 소리 끝나고 2초 뒤 오디오 정지(발열) */
+function pathNums(){try{return path.filter(i=>G.pz.B.cells[i].t==='n').length}catch(e){return 1}}
+let acOut=null,acIdle=0;
+function acGet(){if(!P.snd)return null;try{if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)();const comp=ac.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=3;comp.connect(ac.destination);
+  const dry=ac.createGain();dry.gain.value=.9;dry.connect(comp);const rv=ac.createConvolver(),len=Math.floor(ac.sampleRate*.9),ir=ac.createBuffer(2,len,ac.sampleRate);
+  for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2)}rv.buffer=ir;const wet=ac.createGain();wet.gain.value=.22;rv.connect(wet).connect(comp);
+  acOut={dry,rv}}if(ac.state==='suspended')ac.resume();return ac}catch(e){return null}}
+function acRest(ms){clearTimeout(acIdle);acIdle=setTimeout(()=>{try{ac&&ac.state==='running'&&ac.suspend()}catch(e){}},ms+2000)}
+/* 한 음: parts=[[배음비,세기,감쇠초]] */
+function voice(f,t,parts,vol,wet=1,lp=0){const g=ac.createGain();g.gain.value=vol;let out=g;if(lp){const fl=ac.createBiquadFilter();fl.type='lowpass';fl.frequency.value=lp;g.connect(fl);out=fl}
+  out.connect(acOut.dry);if(wet){const w=ac.createGain();w.gain.value=wet;out.connect(w).connect(acOut.rv)}let end=0;
+  for(const [r,a,d] of parts){const o=ac.createOscillator(),e=ac.createGain();o.type='sine';o.frequency.value=f*r;e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(a,t+.004);e.gain.exponentialRampToValueAtTime(.0005,t+d);o.connect(e).connect(g);o.start(t);o.stop(t+d+.03);end=Math.max(end,d)}return end}
+const MARIMBA=[[1,1,.32],[4,.28,.06],[10,.06,.02]],BELL=[[1,1,.9],[2.76,.45,.45],[5.4,.22,.22],[8.93,.08,.1]],WOOD=[[1,1,.07],[2.5,.35,.03]];
+function play(notes){const a=acGet();if(!a)return;try{const t0=a.currentTime+.01;let last=0;for(const n of notes){const e=voice(n.f,t0+(n.at||0),n.p,n.v,n.w==null?1:n.w,n.lp||0);last=Math.max(last,(n.at||0)+e)}acRest(last*1000)}catch(e){}}
+function tone(f,d=.09,type='triangle',vol=.1,delay=0){play([{f,at:delay,p:[[1,1,Math.max(.05,d)]],v:vol*.8}])}
+const PENTA=[523.25,587.33,659.25,783.99,880,1046.5,1174.66,1318.5,1567.98,1760];
+const sTap=()=>play([{f:880,p:WOOD,v:.16,w:.3}]);
+/* 길 이을 때: 숫자 개수만큼 음이 한 칸씩 올라가요 */
+const sStep=n=>play([{f:PENTA[Math.min(PENTA.length-1,Math.max(0,n-1))],p:MARIMBA,v:.2,w:.5}]);
+/* 목표값 찾음: 반짝이는 벨 아르페지오 */
+const sWin=()=>play([[1046.5,0],[1318.5,.06],[1567.98,.12],[2093,.19]].map(([f,at],k)=>({f,at,p:BELL,v:.07+(k===3?.02:0)})).concat([{f:523.25,p:MARIMBA,v:.1,w:.4}]));
+/* 클리어: 마림바로 올라가고 벨 화음으로 마무리 */
+const sBig=()=>play([[523.25,0],[659.25,.09],[783.99,.18],[1046.5,.27]].map(([f,at])=>({f,at,p:MARIMBA,v:.12})).concat([1046.5,1318.5,1567.98].map((f,k)=>({f,at:.4+k*.015,p:BELL,v:.06})),[{f:2093,at:.55,p:BELL,v:.035},{f:261.63,at:.4,p:[[1,1,1.1],[2,.3,.6]],v:.09,w:.6}]));
+/* 실패·상대 득점: 낮고 부드러운 두 음 */
+const sLose=()=>play([{f:392,p:MARIMBA,v:.11,w:.4,lp:1800},{f:311.13,at:.14,p:[[1,1,.45],[4,.15,.05]],v:.11,w:.5,lp:1500}]);
 function buzz(ms){if(!P.vib)return;try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}}
 
 /* ================= level / titles / ranks ================= */
@@ -711,7 +734,7 @@ function down(e){
   else if(C[i].t==='n'&&C[last].t==='n'){const common=nbr(G.pz.B.n,last).filter(o=>!path.includes(o)&&adj(o,i));if(common.length===1)path.push(common[0],i);else path=[i]}
   else if(C[i].t==='n')path=[i];
   else return;
-  drag=true;sTap();
+  drag=true;sStep(pathNums());
   try{$('bwrap').setPointerCapture(e.pointerId)}catch(_){}
   renderPath();check();
 }
@@ -719,7 +742,7 @@ function move(e){
   if(!drag||!G||!G.live||!path.length)return;const i=cellAt(e.clientX,e.clientY);if(i<0)return;
   const last=path[path.length-1];if(i===last)return;
   if(i===path[path.length-2]){path.pop();renderPath();return}
-  if(!path.includes(i)&&adj(last,i)){path.push(i);if(G.pz.B.cells[i].t==='n')sTap();renderPath();check()}
+  if(!path.includes(i)&&adj(last,i)){path.push(i);if(G.pz.B.cells[i].t==='n')sStep(pathNums());renderPath();check()}
 }
 function up(){drag=false}
 $('bwrap').addEventListener('pointerdown',down);
@@ -1143,12 +1166,15 @@ applyTheme=function(){
 const BGM=[['music/dawn.mp3','겨울밤 퍼즐'],['music/xmas.mp3','크리스마스 멜로디'],['music/solves.mp3','크리스마스 풀이'],['music/track4.mp3','별빛 산책']];
 let bgmEl=null,bgmIdx=-1;
 function bgmPickIdx(){if(P.bgmPick>=0)return P.bgmPick;if(bgmIdx<0){P.bgmTurn=((P.bgmTurn||0)+1)%BGM.length;save();bgmIdx=P.bgmTurn}return bgmIdx}
-function bgmPlay(){if(!P.bgm||document.hidden)return;try{const i=bgmPickIdx();if(!bgmEl){bgmEl=new Audio();bgmEl.loop=true;bgmEl.volume=.38;bgmEl.preload='auto'}
+const BGM_NATIVE=!!(window.AndroidApp&&AndroidApp.bgmPlay);
+function bgmPlay(){if(!P.bgm||document.hidden)return;try{const i=bgmPickIdx();if(BGM_NATIVE){AndroidApp.bgmPlay(BGM[i][0],.38);return}if(!bgmEl){bgmEl=new Audio();bgmEl.loop=true;bgmEl.volume=.38;bgmEl.preload='auto'}
   const src=BGM[i][0];if(!bgmEl.src.endsWith(src))bgmEl.src=src;const p=bgmEl.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}}
-function bgmStop(){try{bgmEl&&bgmEl.pause()}catch(e){}}
+function bgmStop(){try{if(BGM_NATIVE)AndroidApp.bgmStop();bgmEl&&bgmEl.pause()}catch(e){}}
 /* 소리는 손가락이 한 번 닿은 뒤에만 나올 수 있어요 */
 document.addEventListener('pointerdown',function f(){document.removeEventListener('pointerdown',f,true);bgmPlay()},true);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)bgmStop();else bgmPlay()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){bgmStop();try{ac&&ac.state==='running'&&ac.suspend()}catch(e){}}else bgmPlay()});
+window.addEventListener('pagehide',bgmStop);
+if(BGM_NATIVE)setTimeout(bgmPlay,400);
 
 /* ---------- 별콩이 (별잇기 3D 그림 층: 몸 색 + 옷 + 표정 + 안경 + 모자) ---------- */
 const KONG_EX=['smile','happy','excited','love','wink','proud','think','surprise','worry','sad','sleepy'];
