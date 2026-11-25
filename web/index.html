@@ -1264,7 +1264,7 @@ const KONG_TH_LOOK={night:{c:'gold',o:'',h:'nightcap'},dawn:{c:'lilac',o:'',h:'b
 function kongLook(){shopMigrate();const L=P.cd.look;return L&&L.c?L:(KONG_TH_LOOK[P.th]||KONG_TH_LOOK.dawn)}
 /* 3.5 (젠다): 기본 말고는 모두 ★로 사요. 별을 오래 모아야 살 수 있게 비싸게 (하루 ★60~80 정도 모여요) */
 var SHOP={'t:night':1000,'c:pink':400,'c:coral':400,'o:scarf':500,'h:santa':500,'h:blossom':500,'h:sailor':500,'h:rudolph':800,'h:phones':1000,'h:wreath':1000,'h:crown':2000,'a:glasses':700,'a:heart':900,
-  't:xmas':1500,'t:sakura':1500,'t:sea':1500,'n:gold':600,'n:neon':900,'n:cyber':1300,'n:magic':1800,'d:snow':500,'d:petals':500,'d:stars':600,'d:lights':800,'m:1':700,'m:2':700,'m:3':700};
+  't:xmas':1500,'t:sakura':1500,'t:sea':1500,'n:gold':600,'n:neon':900,'n:cyber':1300,'n:magic':1800,'d:snow':500,'d:petals':500,'d:stars':600,'d:lights':800,'m:0':700,'m:1':700,'m:2':700};
 const isDec=()=>new Date().getMonth()===11;
 function price(key){return SHOP[key]||0}
 function owns(key){if(UNLOCK()||!price(key)||(P.own2&&P.own2[key]))return true;const [k,v]=key.split(':');
@@ -1275,7 +1275,7 @@ function owns(key){if(UNLOCK()||!price(key)||(P.own2&&P.own2[key]))return true;c
   return false}
 function own(key){P.own2=P.own2||{};P.own2[key]=1}
 /* 예전에 쓰던 것은 그대로 쓸 수 있게 (한 번만) */
-function shopMigrate(){if(P.shop35)return;P.shop35=1;P.own2=P.own2||{};try{const L=P.cd&&P.cd.look;if(L&&L.c){own('c:'+L.c);if(L.o)own('o:'+L.o);if(L.h)own('h:'+L.h)}if(P.theme&&P.theme!=='base')own('n:'+P.theme);if(P.bgmPick>0)own('m:'+P.bgmPick)}catch(e){}}
+function shopMigrate(){if(P.shop35)return;P.shop35=1;P.own2=P.own2||{};try{const L=P.cd&&P.cd.look;if(L&&L.c){own('c:'+L.c);if(L.o)own('o:'+L.o);if(L.h)own('h:'+L.h)}if(P.theme&&P.theme!=='base')own('n:'+P.theme);if(P.bgmPick>=0&&P.bgmPick!==3)own('m:'+P.bgmPick)}catch(e){}}
 function kongOwn(id){if(!id)return true;const it=KONG_HATS.find(x=>x[0]===id);return owns((it?'h:':'a:')+id)}
 function kongHtml(ex,L,acc){L=L||kongLook();const a=acc!=null?acc:P.cd.acc;const k=KONG_EX.includes(ex)?ex:'smile',u=n=>'<img src="caddy3d/l/'+n+'.webp" alt="" draggable="false">';
   return '<span class="cd3l">'+u('body_'+L.c)+(L.o?u('outfit_'+L.o):'')+u('face_'+k)+(a?u('acc_'+a):'')+(L.h?u('hat_'+L.h):'')+'</span>'}
@@ -1377,7 +1377,7 @@ renderMe=function(){
   const kOpt=(arr,key,cur)=>arr.map(([v,n])=>{const has=!v||owns(key+':'+v),p=price(key+':'+v);const prev=key==='c'?{c:v,o:'',h:''}:key==='o'?{c:L.c,o:v,h:''}:key==='h'?{c:L.c,o:'',h:v}:{c:L.c,o:'',h:''};
     return'<button class="it'+(cur===v?' on':'')+'" data-k="'+key+'" data-v="'+v+'" data-p="'+(p||0)+'"><span class="mini">'+(v||key==='c'?kongHtml('smile',prev,key==='a'?v:''):'✕')+'</span><small>'+n+'</small><em>'+(has?(cur===v?'쓰는 중':'고르기'):'★'+p)+'</em></button>'}).join('');
   const decos=DECOS.map(([v,n])=>{const own=!v||owns('d:'+v);return'<button class="it'+(P.deco===v?' on':'')+'" data-deco="'+v+'"><span class="mini dm">'+(v==='lights'?'<span style="color:#ffd166">💡</span>':v?decoSvg(v,3):'✕')+'</span><small>'+n+'</small><em>'+(own?(P.deco===v?'쓰는 중':'고르기'):'★'+price('d:'+v))+'</em></button>'}).join('');
-  const bgm=[[-1,'돌아가며 (가진 곡만)']].concat(BGM.map((b,i)=>[i,b[1]])).map(([i,n])=>{const has=i<0||owns('m:'+i);return'<button class="sr" data-bgm="'+i+'"><span>'+n+(i===0?' <small class="mut">기본</small>':'')+'</span><span class="r">'+(has?(P.bgmPick===i?'✓':''):'★'+price('m:'+i))+'</span></button>'}).join('');
+  const bgm=[[-1,'돌아가며 (가진 곡만)']].concat(BGM.map((b,i)=>[i,b[1]])).map(([i,n])=>{const has=i<0||owns('m:'+i);return'<button class="sr" data-bgm="'+i+'"><span>'+n+(i===3?' <small class="mut">기본</small>':'')+'</span><span class="r">'+(has?(P.bgmPick===i?'✓':''):'★'+price('m:'+i))+'</span></button>'}).join('');
   $('pgMe').innerHTML='<div class="prof'+(adsRemoved()?' gold':'')+'">'+profHtml()+'</div>'+
    '<div class="stat"><div><b>'+P.games+'</b>판</div><div><b>'+P.wins+'</b>승리</div><div><b>★'+P.coins+'</b>가진 별</div></div>'+
    '<div class="sec">내 기록 · 나만 보는 기록이에요</div><div class="lb" id="meRec">'+meRecHtml()+'</div>'+
