@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="3.0"</script>
+<script>window.APP_VERSION="3.1"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -99,6 +99,13 @@ input{font-family:var(--fd);font-size:18px;background:var(--ink);color:var(--fg)
 .emb{width:54px;height:54px;flex:none}
 .lr.rr{grid-template-columns:28px 30px 1fr auto}.lr.rr .emb{width:30px;height:30px}.lr .nm small.rc{display:block;margin:1px 0 0}
 #frRt .emb{width:26px;height:26px}
+.lr.pin{margin-top:10px;border-width:2px}
+#rkTi{white-space:nowrap;flex:none}
+.ssh{margin-top:4px;font-size:12.5px}.ssh span{display:inline-flex;align-items:center;gap:3px;margin-right:8px}.ssh .emb,.kv .emb{width:20px;height:20px;vertical-align:middle}
+.lr.rec{grid-template-columns:34px 1fr auto;width:100%;border:0;text-align:left;color:var(--fg);font:inherit;cursor:pointer}
+.lr.rec .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-family:var(--fd);color:#10132e;font-size:14px}
+.lr.rec .ic .emb{width:26px;height:26px}
+.kv.rk{max-height:52vh;overflow:auto;text-align:left}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
 .cal i{aspect-ratio:1.25;border-radius:8px;background:var(--panel2);display:grid;place-items:center;font-style:normal;font-size:12px;color:var(--mute)}
 .cal i.d{background:var(--op);color:#00222a;font-family:var(--fd)}
@@ -803,11 +810,12 @@ function finish(win){
   P.games++;P.solved+=G.solved;
   if(G.mode==='vs'){
     if(win){xp+=40+G.lv*20;P.wins++;if(P.beaten<G.lv+1)P.beaten=G.lv+1}
+    P.vsb=P.vsb||[[0,0],[0,0],[0,0],[0,0],[0,0]];P.vsb[G.lv][win?0:1]++;recAdd('vs',{k:G.lv,w:win?1:0,s:G.me+':'+G.op});
     head=win?'승리!':'아쉬워요';
     lines=[['점수',G.score],['찾은 길',G.me+' : '+G.op],['최고 콤보',G.best]];
     if(win&&G.lv<4)extraBtn='<button class="btn pri" id="rNext">다음 AI: '+AIS[G.lv+1].nm+'</button>';
   }else if(G.mode==='inf'){
-    const nb=G.score>P.best;if(nb)P.best=G.score;
+    const nb=G.score>P.best;if(nb)P.best=G.score;recAdd('inf',{s:G.score,st:G.stage});
     head=nb?'새 기록!':'러시 끝';
     lines=[['점수',G.score],['버틴 판',G.stage],['찾은 길',G.solved],['최고 콤보',G.best],['내 최고',P.best]];
   }else if(G.mode==='day'){
@@ -826,16 +834,16 @@ function finish(win){
       P.fr=P.fr||{w:0,l:0,log:[]};P.fr.d=P.fr.d||0;if(G.draw)P.fr.d++;else if(win)P.fr.w++;else P.fr.l++;P.fr.log.unshift({n:G.opNick||'상대',w:G.draw?2:win?1:0,s:G.me+':'+G.op,at:Date.now()});P.fr.log=P.fr.log.slice(0,20);
       lines.push(['한판 승부 전적',frRec()+' · 승률 '+frRate()+'%']);
       /* 3.0 (젠다): 한판 승부 결과로 랭크 점수·등급. 상대가 강할수록 이기면 더 오르고 지면 덜 내려가요. 같은 상대는 하루 3판까지만 점수 반영 */
-      const dk=todayKey(),nk=String(G.opNick||'?');if(!P.fr.cap||P.fr.cap.d!==dk)P.fr.cap={d:dk,m:{}};const cnt=P.fr.cap.m[nk]=(P.fr.cap.m[nk]||0)+1;
+      seasonRoll();const dk=todayKey(),nk=String(G.opNick||'?');if(!P.fr.cap||P.fr.cap.d!==dk)P.fr.cap={d:dk,m:{}};const cnt=P.fr.cap.m[nk]=(P.fr.cap.m[nk]||0)+1;
       const adj=Math.max(-8,Math.min(8,Math.round(((G.opRp||0)-P.rp)/25))),old=P.rp;
-      const d=cnt>3?0:G.draw?Math.max(0,4+Math.round(adj/2)):win?Math.max(8,20+adj):-Math.max(4,12-adj);P.rp=Math.max(0,P.rp+d);
+      const d=cnt>3?0:G.draw?Math.max(0,4+Math.round(adj/2)):win?Math.max(8,20+adj):-Math.max(4,12-adj);P.rp=Math.max(0,P.rp+d);P.rs[G.draw?'d':win?'w':'l']++;P.rs.top=Math.max(P.rs.top||0,tierOf(P.rp));
       lines.push(['랭크 점수',cnt>3?'같은 상대는 하루 3판까지만 반영돼요':(P.rp-old>=0?'+':'')+(P.rp-old)+' → '+P.rp]);
       const k0=tierOf(old),k1=tierOf(P.rp);if(k1>k0)lines.push(['승급!',TIERS[k1][0]]);else if(k1<k0)lines.push(['등급',TIERS[k1][0]])}
     if(G.forfeit)lines.push(['','상대가 나갔어요']);
   }else if(G.mode==='iq'){
     const fr=G.fr||[],avg=fr.length?fr.reduce((a,b)=>a+b,0)/fr.length:0;
     /* 1.3: 계산 판 12목표(60%) + 별자리 퍼즐 2판(40%) → 70~150 */
-    G.iq=iqRush();const nb=G.iq>(P.iq||0);if(nb)P.iq=G.iq;xp+=20;
+    G.iq=iqRush();const nb=G.iq>(P.iq||0);if(nb)P.iq=G.iq;recAdd('iq',{v:G.iq,ok:(G.res||[]).filter(r=>r.ok).length});xp+=20;
     head=nb&&P.games>0?'IQ 도전 · 새 기록!':'IQ 도전 결과';
     lines=[['찾은 길',G.solved+' / '+G.total*K_PER],['평균 속도',Math.round(avg*100)+'%'],['최고 콤보',G.best],['내 최고 IQ',P.iq]];
   }
@@ -882,9 +890,9 @@ function banner(){if(!APP||!APP.showBanner)return;try{if(!adsRemoved()&&!$('home
 /* ================= online: Firebase through window.claude.use (online.js from 별잇기) ================= */
 let DB=null,ME=null;
 async function net(){if(!ONLINE())return false;if(DB)return true;try{DB=await claude.use('db');ME=await (await claude.use('user')).id();return true}catch(e){DB=null;return false}}
-async function syncOnline(){
+async function syncOnline(){try{seasonRoll()}catch(e){}
   if(!(await net()))return;
-  try{await DB.doc('players/'+ME).set({nick:P.nick.slice(0,12),rp:P.rp,lv:lvOf(P.xp).lv,fw:(P.fr&&P.fr.w)||0,fd:(P.fr&&P.fr.d)||0,fl:(P.fr&&P.fr.l)||0,at:Date.now()})}catch(e){}
+  try{await DB.doc('players/'+ME).set({nick:P.nick.slice(0,12),rp:P.rp,lv:lvOf(P.xp).lv,fw:(P.fr&&P.fr.w)||0,fd:(P.fr&&P.fr.d)||0,fl:(P.fr&&P.fr.l)||0,rs:(P.rs&&P.rs.id)||'',sw:(P.rs&&P.rs.w)||0,sd:(P.rs&&P.rs.d)||0,sl:(P.rs&&P.rs.l)||0,at:Date.now()})}catch(e){}
   try{if(P.ss.id&&P.ss.sc>0)await DB.doc('seasons/'+P.ss.id+'/p/'+ME).set({n:P.nick.slice(0,12),sc:P.ss.sc,k:tierOf(P.rp),lv:lvOf(P.xp).lv,at:Date.now()})}catch(e){}
 }
 
@@ -963,6 +971,14 @@ async function startRanked(){
   mmStop._w=stopWatch;
 }
 function mmStop(keep){clearTimeout(mmTimer);mmTimer=null;try{mmStop._w&&mmStop._w()}catch(e){}mmStop._w=null;if(mmDoc){try{mmDoc.remove()}catch(e){}mmDoc=null}}
+/* 3.1 (젠다): 한판 승부 한 달 시즌. 1일에 점수 절반으로 새 시즌, 지난 시즌 최고 등급 마크는 기념으로 남아요 */
+function ssHistHtml(n){return P.rsHist&&P.rsHist.length?'<p class="mut ssh">지난 시즌 '+P.rsHist.slice(0,n).map(h=>'<span>'+emblem(h.k,20)+ssName(h.id)+' '+TIERS[h.k][0]+'</span>').join('')+'</p>':''}
+function seasonRoll(){const mk=monthKey();if(!P.rs){P.rs={id:mk,w:0,d:0,l:0,top:tierOf(P.rp)};return}
+  if(P.rs.id!==mk){if(P.rs.w+P.rs.d+P.rs.l>0){P.rsHist=P.rsHist||[];P.rsHist.unshift({id:P.rs.id,k:P.rs.top,rp:P.rp,w:P.rs.w,d:P.rs.d,l:P.rs.l});P.rsHist=P.rsHist.slice(0,24)}
+    P.rp=Math.floor(P.rp/2);P.rs={id:mk,w:0,d:0,l:0,top:tierOf(P.rp)};save()}}
+function ssName(id){return +String(id).slice(5)+'월'}
+/* 3.1 (젠다): 내 기록 (랭킹에는 안 올라가요) */
+function recAdd(k,o){P.recs=P.recs||{};const a=P.recs[k]=P.recs[k]||[];o.at=Date.now();a.unshift(o);if(a.length>30)a.length=30}
 function frRate(){const f=P.fr||{w:0,l:0,d:0},n=f.w+f.l+(f.d||0);return n?Math.round((f.w+(f.d||0)/2)*100/n):0}
 function frRec(){const f=P.fr||{w:0,l:0};return f.w+'승 '+(f.d?f.d+'무 ':'')+f.l+'패'}
 function frHist(){const f=P.fr;if(!f||!f.log.length)return '';const d=t=>{const x=new Date(t);return (x.getMonth()+1)+'/'+x.getDate()};
@@ -1005,7 +1021,7 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.t));
 function goHome(){clearT();leaveRoom();G=null;show('home');tab(curTab);if(P.seen&&$('ov').hidden)maybeAskNoti()}
 function profHtml(){const L=lvOf(P.xp);const ti=titleIdx(),nx=TITLES[ti+1];
   return '<div class="lvbadge">'+L.lv+'<small>LV</small></div><div class="ttl"><b style="font-weight:400">'+titleOf(L.lv)+'</b><span>'+esc(P.nick)+'</span></div><div class="xpbar"><i style="transform:scaleX('+(L.rest/L.need)+')"></i></div><div class="xptx"><span>'+L.rest+' / '+L.need+' XP</span><span>'+(nx?'다음 칭호 '+nx[1]:'최고 칭호')+'</span></div>'}
-function renderPlay(){
+function renderPlay(){try{seasonRoll()}catch(e){}
   $('profBox').innerHTML=profHtml();$('profBox').classList.toggle('gold',adsRemoved());
   $('aiRow').innerHTML=AIS.map((a,k)=>{const open=UNLOCK()||k<=P.beaten,won=k<P.beaten;return'<button class="ai'+(open?'':' lock')+(won?' won':'')+'" data-k="'+k+'">'+a.nm+'<small>'+(open?a.bot:'잠김')+'</small></button>'}).join('');
 
@@ -1029,7 +1045,8 @@ async function tierModal(){modal('<h2>한판 승부 등급</h2><p class="mut c">
 async function renderRank(){
   $('rkS').classList.toggle('on',rkMode==='S');$('rkR').classList.toggle('on',rkMode==='R');
   const k=tierOf(P.rp),nx=TIERS[k+1];
-  $('rkMe').innerHTML=rkMode==='R'?emblem(k)+'<div><p style="font-family:var(--fd);font-size:19px">'+TIERS[k][0]+' · '+P.rp+'점</p><p class="mut">'+(P.fr&&(P.fr.w+P.fr.l+(P.fr.d||0))?frRec()+' · 승률 '+frRate()+'%':'한판 승부를 하면 등급이 생겨요')+'<br>'+(nx?'다음 '+nx[0]+'까지 '+(nx[1]-P.rp)+'점':'최고 등급')+'</p></div><button class="btn sm" id="rkTi">등급표</button>'
+  seasonRoll();const rs=P.rs,rn=rs.w+rs.d+rs.l,nd=new Date(Date.now()+9*3600e3),left=Math.ceil((Date.UTC(nd.getUTCFullYear(),nd.getUTCMonth()+1,1)-nd.getTime())/864e5);
+  $('rkMe').innerHTML=rkMode==='R'?emblem(k)+'<div><p style="font-family:var(--fd);font-size:19px">'+TIERS[k][0]+' · '+P.rp+'점</p><p class="mut">'+ssName(rs.id)+' 시즌 · '+(rn?rs.w+'승 '+(rs.d?rs.d+'무 ':'')+rs.l+'패 · '+Math.round((rs.w+rs.d/2)*100/rn)+'%':'아직 0판')+'<br>'+(nx?nx[0]+'까지 '+(nx[1]-P.rp)+'점':'최고 등급')+' · 새 시즌 '+left+'일 뒤</p>'+ssHistHtml(4)+'</div><button class="btn sm" id="rkTi">등급표</button>'
     :'<div><p style="font-family:var(--fd);font-size:19px">이번 시즌 '+(P.ss.id===monthKey()?P.ss.sc:0)+'점</p><p class="mut">한 달 동안 얻은 경험치 순위예요. 매달 1일에 새로 시작해요.</p></div>';
   if($('rkTi'))$('rkTi').onclick=tierModal;
   const L=$('rkList');
@@ -1037,14 +1054,35 @@ async function renderRank(){
   L.innerHTML='<p class="mut c">불러오는 중…</p>';
   if(!(await net())){L.innerHTML='<p class="mut c">인터넷 연결을 확인해 주세요</p>';return}
   try{
-    const q=rkMode==='S'?await DB.collection('seasons/'+monthKey()+'/p').orderBy('sc').limit(100).get():await DB.collection('players').orderBy('rp').limit(100).get();
+    const q=rkMode==='S'?await DB.collection('seasons/'+monthKey()+'/p').orderBy('sc').limit(500).get():await DB.collection('players').orderBy('rp').limit(500).get();
     let rows=q.docs.map(d=>({id:d.id,...d.data()}));
-    if(rkMode==='R')rows=rows.filter(r=>(r.fw||0)+(r.fl||0)+(r.fd||0)>0).sort((a,b)=>(b.rp||0)-(a.rp||0));
-    const rec=r=>{const n=(r.fw||0)+(r.fl||0)+(r.fd||0);return (r.fw||0)+'승 '+(r.fd?r.fd+'무 ':'')+(r.fl||0)+'패 · '+Math.round(((r.fw||0)+(r.fd||0)/2)*100/n)+'%'};
+    const mk=monthKey();if(rkMode==='R')rows=rows.filter(r=>r.rs===mk&&(r.sw||0)+(r.sl||0)+(r.sd||0)>0).sort((a,b)=>(b.rp||0)-(a.rp||0));else rows.sort((a,b)=>(b.sc||0)-(a.sc||0));
+    const myI=rows.findIndex(r=>r.id===ME),all=rows.length;rows=rows.slice(0,100);
+    const rec=r=>{const n=(r.sw||0)+(r.sl||0)+(r.sd||0);return (r.sw||0)+'승 '+(r.sd?r.sd+'무 ':'')+(r.sl||0)+'패 · '+Math.round(((r.sw||0)+(r.sd||0)/2)*100/n)+'%'};
+    const mine=rkMode==='R'?(P.rs.w+P.rs.d+P.rs.l>0):(P.ss.id===mk&&P.ss.sc>0);
+    const pin='<div class="lr me pin"><span class="k">나</span><span class="nm">내 순위 <b>'+(myI>=0?(myI+1)+'위':mine?(all>=500?'500위 밖':'곧 반영돼요'):'-')+'</b><small>'+(mine?(myI>=0?'전체 '+all+'명 중':''):(rkMode==='R'?'이번 시즌 한판 승부를 하면 올라가요':'이번 달에 한 판 하면 올라가요'))+'</small></span><span class="v">'+(rkMode==='R'?P.rp+'점':(P.ss.id===mk?P.ss.sc:0)+'점')+'</span></div>';
     L.innerHTML=rows.length?rows.map((r,i)=>rkMode==='R'?'<div class="lr rr'+(r.id===ME?' me':'')+'"><span class="k">'+(i+1)+'</span>'+emblem(tierOf(r.rp||0),30)+'<span class="nm">'+esc(r.nick||r.n||'?')+'<small class="rc">'+TIERS[tierOf(r.rp||0)][0]+' · '+rec(r)+'</small></span><span class="v">'+(r.rp||0)+'점</span></div>'
       :'<div class="lr'+(r.id===ME?' me':'')+'"><span class="k">'+(i+1)+'</span><span class="nm">'+esc(r.n||r.nick||'?')+'<small>'+(r.lv?'Lv '+r.lv:'')+'</small></span><span class="v">'+(r.sc||0)+'점</span></div>').join(''):'<p class="mut c">'+(rkMode==='R'?'아직 한판 승부 기록이 없어요. 친구를 초대해 첫 판을 해 보세요!':'아직 기록이 없어요. 첫 번째가 되어 보세요!')+'</p>';
+    L.innerHTML+=(all>100?'<p class="mut c" style="font-size:12.5px">상위 100명까지 보여요</p>':'')+pin;
   }catch(e){L.innerHTML='<p class="mut c">순위표를 불러오지 못했어요</p>'}
 }
+function meRecHtml(){
+  const R=P.recs||{},cs=P.cs||[],stT=cs.reduce((a,c)=>a+((c&&c.st)||0),0),clT=cs.reduce((a,c)=>a+((c&&c.clr)||0),0),vb=P.vsb||[],vw=vb.reduce((a,x)=>a+x[0],0),vl=vb.reduce((a,x)=>a+x[1],0);
+  const row=(id,ic,bg,nm,sub,v)=>'<button class="lr rec" data-r="'+id+'"><span class="ic" style="background:'+bg+'">'+ic+'</span><span class="nm">'+nm+'<small class="rc">'+sub+'</small></span><span class="v">'+v+' ›</span></button>';
+  return row('cs','+','#ffd166','별셈 퍼즐','깬 판 '+clT+' · 모은 별 ★'+stT,(cs.filter(c=>c&&c.clr).length?AIS[cs.reduce((m,c,i)=>c&&c.clr?i:m,0)].nm:'-'))
+    +row('vs','👑','#7ee0f9','도전! 별셈왕',vw+'승 '+vl+'패 · 이긴 봇 '+P.beaten+'/5',P.beaten?AIS[P.beaten-1].bot:'-')
+    +row('inf','∞','#ff8f8f','무한 러시','최고 점수 · '+((R.inf||[]).length)+'판 기록',P.best||'-')
+    +row('iq','IQ','#c9a7ff','IQ 도전','최고 IQ · '+((R.iq||[]).length)+'번 기록',P.iq||'-')
+    +row('fr',emblem(tierOf(P.rp),26),'transparent','한판 승부',(P.fr?frRec()+' · 승률 '+frRate()+'%':'아직 기록 없어요'),TIERS[tierOf(P.rp)][0]);
+}
+function recModal(id){const R=(P.recs||{})[id]||[],d=t=>{const x=new Date(t);return (x.getMonth()+1)+'/'+x.getDate()+' '+String(x.getHours()).padStart(2,'0')+':'+String(x.getMinutes()).padStart(2,'0')};
+  const kv=(a,b)=>'<span>'+a+'</span><b>'+b+'</b>';let h='',t='';
+  if(id==='cs'){t='별셈 퍼즐';h=(P.cs||[]).map((c,i)=>c?kv(AIS[i].nm,(c.lv)+'단계 · 깬 판 '+c.clr+' · ★'+c.st):'').join('')+(R.length?'<span class="mut" style="grid-column:1/-1;margin-top:8px">최근에 깬 판</span>'+R.slice(0,15).map(r=>kv(d(r.at)+' · '+AIS[r.k].nm+' '+r.lv+'단계','★'.repeat(r.st))).join(''):'')}
+  else if(id==='vs'){t='도전! 별셈왕';const vb=P.vsb||[];h=AIS.map((a,i)=>kv(a.nm+' · '+a.bot,vb[i]?vb[i][0]+'승 '+vb[i][1]+'패':(i<P.beaten?'이김':'-'))).join('')+(R.length?'<span class="mut" style="grid-column:1/-1;margin-top:8px">최근 대결</span>'+R.slice(0,15).map(r=>kv(d(r.at)+' · '+AIS[r.k].bot,(r.w?'승 ':'패 ')+r.s)).join(''):'')}
+  else if(id==='inf'){t='무한 러시';const a=R.slice(0,10),avg=a.length?Math.round(a.reduce((x,r)=>x+r.s,0)/a.length):0;h=kv('최고 점수',P.best||0)+kv('최근 10판 평균',avg||'-')+R.slice(0,20).map(r=>kv(d(r.at),r.s+'점 · '+r.st+'판')).join('')}
+  else if(id==='iq'){t='IQ 도전';h=kv('최고 IQ',P.iq||'-')+R.slice(0,20).map(r=>kv(d(r.at),'IQ '+r.v+(r.ok!=null?' · '+r.ok+'/3판':''))).join('')}
+  else{t='한판 승부';const f=P.fr||{w:0,l:0,d:0,log:[]};h=kv('전체 전적',frRec())+kv('승률',frRate()+'%')+kv('지금 등급',TIERS[tierOf(P.rp)][0]+' · '+P.rp+'점')+(P.rsHist||[]).slice(0,12).map(s=>kv(ssName(s.id)+' 시즌','<span class="ssh">'+emblem(s.k,20)+'</span>'+TIERS[s.k][0]+' · '+s.w+'승 '+(s.d?s.d+'무 ':'')+s.l+'패')).join('')+(f.log||[]).slice(0,15).map(r=>kv(d(r.at)+' · '+esc(r.n),(r.w===1?'승 ':r.w===2?'무 ':'패 ')+r.s)).join('')}
+  modal('<h2>'+t+'</h2><p class="mut c">'+(id==='fr'?'시즌 순위는 랭킹 탭에서 봐요':'랭킹에는 안 올라가는 나만의 기록이에요')+'</p><div class="kv rk">'+(h||'<span class="mut">아직 기록이 없어요</span>')+'</div><button class="btn wide" id="rmOk" style="margin-top:12px">닫기</button>');$('rmOk').onclick=closeModal}
 function renderMe(){
   $('meProf').innerHTML=profHtml();$('meProf').classList.toggle('gold',adsRemoved());
   $('meStat').innerHTML='<div><b>'+P.games+'</b>판</div><div><b>'+P.wins+'</b>승리</div><div><b>'+P.solved+'</b>맞힌 문제</div>';
@@ -1304,6 +1342,7 @@ renderMe=function(){
   const bgm=[[-1,'돌아가며']].concat(BGM.map((b,i)=>[i,b[1]])).map(([i,n])=>'<button class="sr" data-bgm="'+i+'"><span>'+n+'</span><span class="r">'+(P.bgmPick===i?'✓':'')+'</span></button>').join('');
   $('pgMe').innerHTML='<div class="prof'+(adsRemoved()?' gold':'')+'">'+profHtml()+'</div>'+
    '<div class="stat"><div><b>'+P.games+'</b>판</div><div><b>'+P.wins+'</b>승리</div><div><b>★'+P.coins+'</b>가진 별</div></div>'+
+   '<div class="sec">내 기록 · 나만 보는 기록이에요</div><div class="lb" id="meRec">'+meRecHtml()+'</div>'+
    '<div class="seg4">'+[['kong','별콩이'],['th','테마'],['num','숫자 색'],['etc','장식·음악']].map(([k,n])=>'<button class="'+(meSec===k?'on':'')+'" data-sec="'+k+'">'+n+'</button>').join('')+'</div>'+
    (meSec==='kong'?'<div class="kpv"><span class="kong-f big">'+kongHtml('happy')+'</span><div class="mut">별은 판을 끝낼 때마다 모여요. 승부에는 영향이 없어요.</div></div>'+
      '<div class="sec">몸 색</div><div class="its">'+kOpt(KONG_COLS,'c',L.c)+'</div><div class="sec">옷</div><div class="its">'+kOpt(KONG_OUTS,'o',L.o)+'</div>'+
@@ -1314,6 +1353,7 @@ renderMe=function(){
    (meSec==='etc'?'<div class="sec">화면 장식 (움직이지 않아요)</div><div class="its">'+decos+'</div><div class="sec">배경음악 · 젠다님 곡</div><div class="box set">'+bgm+'</div>':'')+
    '<div class="sec">칭호 · 레벨과 실력 조건이 다 맞아야 올라가요</div><div class="lb">'+titlesHtml()+'</div>';
   const pg=$('pgMe');
+  pg.querySelectorAll('.rec').forEach(b=>b.onclick=()=>recModal(b.dataset.r));
   pg.querySelectorAll('[data-sec]').forEach(b=>b.onclick=()=>{meSec=b.dataset.sec;renderMe()});
   pg.querySelectorAll('[data-num]').forEach(b=>b.onclick=()=>{if(b.dataset.ok!=='1')return note('Lv '+b.dataset.l+'에 열려요');P.theme=b.dataset.num;save();applyTheme();renderMe()});
   pg.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{const t=BR_THEMES.find(x=>x.id===b.dataset.th);if(thOpen(t)){P.th=t.id;save();applyTheme();renderMe();return}
@@ -1549,7 +1589,7 @@ function stepHint(){if(!G||!G.live)return;const used=new Set(G.pz.T.map(t=>t.key
   (full?w.p:w.p.slice(0,3)).forEach(i=>kids[i].classList.add('tip'));sTap();renderHud();
   $('expr').innerHTML='<span class="e">💡</span><span class="h">'+(full?'빛나는 길을 그대로 이어 보세요':'빛나는 <b style="color:var(--fg)">'+C[w.p[0]].v+' '+C[w.p[1]].v+' '+C[w.p[2]].v+'</b>부터 시작해 보세요 · 힌트를 한 번 더 누르면 길 전체')+'</span>'}
 function stepWin(){const k=G.lv,cs=P.cs[k],stars=stepStars(),before=lvOf(P.xp),xp=Math.round(G.score/10)+10+k*5,coins=1+k+stars,slv=cs.lv;
-  cs.lv++;cs.clr++;cs.st+=stars;P.games++;P.wins++;P.coins+=coins;addXp(xp);save();syncOnline();notiSync();sBig();G.done=1;
+  recAdd('cs',{k,lv:slv,st:stars});cs.lv++;cs.clr++;cs.st+=stars;P.games++;P.wins++;P.coins+=coins;addXp(xp);save();syncOnline();notiSync();sBig();G.done=1;
   const after=lvOf(P.xp),nx=AIS[k+1],opened=nx&&!UNLOCK()&&cs.clr===CS_NEED[k+1];
   let extra='';if(after.lv>before.lv)extra+='<p class="c" style="color:var(--num);font-family:var(--fd);font-size:18px">레벨 업! Lv '+after.lv+'</p>';
   if(opened)extra+='<p class="c"><b>'+AIS[k+1].nm+'</b> 단계가 열렸어요!</p>';
