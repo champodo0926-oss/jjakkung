@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="3.2"</script>
+<script>window.APP_VERSION="3.3"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -43,6 +43,8 @@ input{font-family:var(--fd);font-size:18px;background:var(--ink);color:var(--fg)
 .brand{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .brand h1{font-family:var(--fd);font-weight:400;font-size:30px;margin:0;letter-spacing:.5px}
 .brand h1 b{color:var(--num);font-weight:400}
+.coin{margin-left:auto;height:38px;padding:0 13px;border-radius:19px;background:var(--panel);color:#ffd166;font-family:var(--fd);font-size:17px;display:flex;align-items:center;gap:5px;border:1px solid rgba(255,209,102,.35)}
+.coin b{color:var(--fg);font-variant-numeric:tabular-nums}.coin.sm{height:28px;padding:0 9px;font-size:13px;margin-left:8px;flex:none}
 .gear{width:38px;height:38px;border-radius:11px;background:var(--panel);display:grid;place-items:center}
 .gear svg{width:20px;height:20px}
 .page{display:flex;flex-direction:column;gap:10px;overflow:auto;min-height:0;flex:1;padding-bottom:6px}
@@ -328,7 +330,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
 
 <!-- HOME -->
 <section class="scr" id="home">
-  <div class="brand"><h1>브레인 <b>별셈</b></h1><button class="gear" id="bSet" aria-label="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg></button></div>
+  <div class="brand"><h1>브레인 <b>별셈</b></h1><button class="coin" id="bCoin" aria-label="가진 별">★ <b class="coinN">0</b></button><button class="gear" id="bSet" aria-label="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg></button></div>
 
   <div class="page" id="pgPlay">
     <div class="prof" id="profBox">
@@ -388,7 +390,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
 
 <!-- GAME -->
 <section class="scr" id="game" hidden>
-  <div class="top"><button class="back" id="gBack" aria-label="그만하기">‹</button><span class="kong-f sm" id="kongG" data-who="q"></span><span class="md" id="gMode">도전! 별셈왕</span><span class="hp" id="gHp"></span><span class="sc" id="gSc">0</span></div>
+  <div class="top"><button class="back" id="gBack" aria-label="그만하기">‹</button><span class="kong-f sm" id="kongG" data-who="q"></span><span class="md" id="gMode">도전! 별셈왕</span><span class="hp" id="gHp"></span><span class="sc" id="gSc">0</span><button class="coin sm" id="gCoin" aria-label="가진 별">★<b class="coinN">0</b></button></div>
   <div class="vs" id="vsBox">
     <div class="side"><span class="nm" id="meNm">나</span><div class="pips" id="pipMe"></div></div>
     <span class="vsx">VS</span>
@@ -430,7 +432,8 @@ const KEY='brainrush.v1';
 let P={xp:0,beaten:0,best:0,day:{},theme:'base',snd:1,vib:1,unlock:0,seen:0,nick:'',rp:0,games:0,wins:0,solved:0,ss:{id:'',sc:0},streak:{last:'',n:0},noti:0,notiAsk:0,adsOff:0,results:0};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s)P=Object.assign(P,s)}catch(e){}
 if(!P.nick)P.nick='러셔'+String(1000+Math.floor(Math.random()*9000));
-function save(){try{tCheck()}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}}
+function coinShow(){try{document.querySelectorAll('.coinN').forEach(e=>e.textContent=P.coins||0)}catch(e){}}
+function save(){try{tCheck()}catch(e){}coinShow();try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}}
 const UNLOCK=()=>TEST_UNLOCK_ALL||P.unlock;
 function adsRemoved(){if(P.adsOff)return true;try{return !!(APP&&APP.adsRemoved&&APP.adsRemoved())}catch(e){return false}}
 
@@ -642,9 +645,10 @@ function boardDone(){G.live=false;clearT();freezeFuse();
   if(G.mode==='step')return stepWin();
   if(G.mode==='iq'){const sec=(performance.now()-G.t0)/1000;G.res.push({ok:true,sec,v:iqPzVal(sec,IQ_LIM[G.stage],0,G.hints)});renderHud();sBig();toast('판 완성!','var(--num)','IQ '+iqRush());G.stage++;T.nx=setTimeout(afterRound,1400);return}
   G.stage++;T.nx=setTimeout(afterRound,1100)}
-function iqHint(){if(G&&G.mode==='step')return stepHint();if(!G||G.mode!=='iq'||!G.live)return;if(G.hints<=0)return note('IQ 도전에서는 힌트가 1번이에요');
+function iqHint(){if(G&&G.mode==='step')return stepHint();if(!G||G.mode!=='iq'||!G.live)return;if(G.hints<=0&&!G.paidH){modal('<h2>힌트 더 받기</h2><p class="c">이 판의 무료 힌트를 다 썼어요. 별로 하나 더 받을까요?<br><span class="mut">힌트를 쓰면 IQ 점수가 조금 내려가요.</span></p><p class="c" style="font-family:var(--fd);font-size:22px;color:#ffd166">★'+IQH_PRICE+' <span class="mut" style="font-size:14px">(가진 별 ★'+P.coins+')</span></p><div class="row"><button class="btn pri" id="ihY">받기</button><button class="btn" id="ihN">괜찮아요</button></div>');
+    $('ihN').onclick=closeModal;$('ihY').onclick=()=>{if(P.coins<IQH_PRICE)return note('별이 '+(IQH_PRICE-P.coins)+'개 더 필요해요');P.coins-=IQH_PRICE;save();G.paidH=1;closeModal();iqHint()};return}
   const used=new Set(G.pz.T.map(t=>t.key).filter(Boolean)),w=G.pz.ways.find(x=>!used.has(x.key));if(!w)return;
-  G.hints--;const kids=$('board').children;w.p.slice(0,3).forEach(i=>kids[i].classList.add('tip'));sTap();renderHud();
+  if(G.hints<=0)G.paidH=0;G.hints--;const kids=$('board').children;w.p.slice(0,3).forEach(i=>kids[i].classList.add('tip'));sTap();renderHud();
   const C=G.pz.B.cells;$('expr').innerHTML='<span class="e">💡</span><span class="h">빛나는 <b style="color:var(--fg)">'+C[w.p[0]].v+' '+C[w.p[1]].v+' '+C[w.p[2]].v+'</b>부터 시작해 보세요</span>'}
 function iqSkip(){if(!G||G.mode!=='iq'||!G.live)return;
   modal('<h2>이 판을 넘길까요?</h2><p class="c">넘기면 이 판은 실패로 쳐요.</p><div class="row"><button class="btn pri" id="qNo">계속 찾기</button><button class="btn" id="qYes">넘기기</button></div>');
@@ -773,7 +777,7 @@ function renderHud(){
     $('pipMe').innerHTML=Array.from({length:goal},(_,k)=>'<i class="'+(k<G.me?'me':'')+'"></i>').join('');
     $('pipOp').innerHTML=Array.from({length:goal},(_,k)=>'<i class="'+(k<G.op?'op':'')+'"></i>').join('')}
   if(G.pz){const ds=G.pz.star||(m==='vs'?G.lv+1:m==='step'?G.lv+1:0);$('dif').textContent=ds?'★'.repeat(ds)+'☆'.repeat(5-ds):'';$('tgt').textContent=G.pz.v;const n=G.pz.T.length;$('ways').innerHTML=n>1?G.pz.T.map(t=>'<i class="'+(t.who||'')+'"></i>').join('')+'<small>'+G.pz.T.filter(t=>t.who==='me').length+'/'+n+'</small>':''}
-  $('bSkip').hidden=m!=='iq';$('bHint').hidden=m!=='iq'&&m!=='step';if(m==='iq')$('bHint').textContent='💡 힌트 '+G.hints;if(m==='step')$('bHint').textContent='💡 힌트';
+  $('bSkip').hidden=m!=='iq';$('bHint').hidden=m!=='iq'&&m!=='step';if(m==='iq')$('bHint').textContent=G.hints>0?'💡 힌트 '+G.hints:'💡 힌트 ★'+IQH_PRICE;if(m==='step')$('bHint').textContent='💡 힌트';
   const cb=$('combo');cb.textContent='콤보 x'+G.combo;cb.classList.toggle('on',G.combo>1);
 }
 function toast(t,col,sub,sm){const el=$('toast');el.className='toast'+(sm?' sm':'');el.innerHTML=t+(sub?'<small>'+sub+'</small>':'');el.style.color=col;void el.offsetWidth;el.classList.add('go')}
@@ -797,7 +801,8 @@ function offerRevive(){
   if(G.revived){return finish(false)}
   G.revived=1;
   const free=adsRemoved();
-  modal('<h2>하트가 다 떨어졌어요</h2><p class="c">'+(free?'광고 제거 혜택으로 한 번 이어 할 수 있어요.':'짧은 광고를 보면 하트 1개로 이어 할 수 있어요.')+'</p><div class="row"><button class="btn pri" id="rvGo">'+(free?'이어 하기':'광고 보고 이어 하기')+'</button><button class="btn" id="rvNo">그만하기</button></div>');
+  modal('<h2>하트가 다 떨어졌어요</h2><p class="c">'+(free?'광고 제거 혜택으로 한 번 이어 할 수 있어요.':'짧은 광고를 보면 하트 1개로 이어 할 수 있어요.')+'</p><div class="row"><button class="btn pri" id="rvGo">'+(free?'이어 하기':'광고 보고 이어 하기')+'</button></div><button class="btn wide" id="rvSt"'+(P.coins<REV_PRICE?' disabled style="opacity:.5"':'')+'>★'+REV_PRICE+'로 이어 하기 (가진 별 ★'+P.coins+')</button><button class="btn wide" id="rvNo">그만하기</button>');
+  $('rvSt').onclick=()=>{if(P.coins<REV_PRICE)return note('별이 '+(REV_PRICE-P.coins)+'개 더 필요해요');P.coins-=REV_PRICE;save();closeModal();G.hp=1;nextPuzzle()};
   $('rvNo').onclick=()=>{closeModal();finish(false)};
   $('rvGo').onclick=()=>{if(free){closeModal();G.hp=1;nextPuzzle();return}
     rewarded('revive',ok=>{closeModal();if(ok){G.hp=1;nextPuzzle()}else{note('광고를 불러오지 못했어요');finish(false)}})};
@@ -981,6 +986,13 @@ function ssName(id){return +String(id).slice(5)+'월'}
 /* 3.2 (젠다): 별셈왕 봇마다 승패 전적. 예전에 이긴 봇은 1승으로 시작 */
 function vsb(){if(!P.vsb){P.vsb=[[0,0],[0,0],[0,0],[0,0],[0,0]];for(let i=0;i<Math.min(5,P.beaten||0);i++)P.vsb[i][0]=1}return P.vsb}
 function vsRec(i){const v=vsb()[i];return v[0]+'승 '+v[1]+'패'}
+/* 3.3 (젠다): 가진 별 ★ 크게 보이기 + 별 쓰는 곳 */
+function coinModal(){modal('<h2>가진 별</h2><p class="c big" style="font-size:40px;color:#ffd166;font-family:var(--fd)">★ '+(P.coins||0)+'</p>'+
+  '<div class="kv"><span class="mut" style="grid-column:1/-1">이렇게 모아요</span><span>판을 끝낼 때마다</span><b>★1~10</b><span>오늘 탭 별 선물</span><b>★10</b><span>광고 제거 구매</span><b>★300</b>'+
+  '<span class="mut" style="grid-column:1/-1;margin-top:8px">이렇게 써요</span><span>별콩이 옷·모자·장식, 테마</span><b>★200~500</b><span>무한 러시 이어 하기</span><b>★'+REV_PRICE+'</b><span>IQ 도전 힌트 더 받기</span><b>★'+IQH_PRICE+'</b></div>'+
+  '<div class="row" style="margin-top:12px"><button class="btn pri" id="cmShop">꾸미기 가게</button><button class="btn" id="cmX">닫기</button></div>');
+  $('cmX').onclick=closeModal;$('cmShop').onclick=()=>{closeModal();if(G&&G.live)return;try{document.querySelector('.tab[data-t="Me"]').click()}catch(e){}}}
+const REV_PRICE=30,IQH_PRICE=20;
 function recAdd(k,o){P.recs=P.recs||{};const a=P.recs[k]=P.recs[k]||[];o.at=Date.now();a.unshift(o);if(a.length>30)a.length=30}
 function frRate(){const f=P.fr||{w:0,l:0,d:0},n=f.w+f.l+(f.d||0);return n?Math.round((f.w+(f.d||0)/2)*100/n):0}
 function frRec(){const f=P.fr||{w:0,l:0};return f.w+'승 '+(f.d?f.d+'무 ':'')+f.l+'패'}
@@ -1606,6 +1618,7 @@ function aiPick(){modal('<h2>도전! 별셈왕</h2><p class="c mut">같은 판�
     '</div><div class="row"><button class="btn" id="byN">닫기</button></div>');
   $('byN').onclick=closeModal;$('ovc').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k;if(!aiOpen(k)){note(AIS[k-1].bot+'을 이기면 열려요');return}closeModal();startVs(k)})}
 $('mAi').onclick=aiPick;
+$('bCoin').onclick=coinModal;$('gCoin').onclick=coinModal;coinShow();
 P.cs=P.cs||[];for(let k=0;k<5;k++)P.cs[k]=Object.assign({lv:1,clr:0,st:0},P.cs[k]||{});tCheck(true);
 const _gh5=goHome;goHome=function(){IQS=null;return _gh5.apply(this,arguments)};
 $('mIqS').onclick=startIqS;
