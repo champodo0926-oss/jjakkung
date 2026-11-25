@@ -993,7 +993,7 @@ function vsRec(i){const v=vsb()[i];return v[0]+'승 '+v[1]+'패'}
 /* 3.3 (젠다): 가진 별 ★ 크게 보이기 + 별 쓰는 곳 */
 function coinModal(){modal('<h2>가진 별</h2><p class="c big" style="font-size:40px;color:#ffd166;font-family:var(--fd)">★ '+(P.coins||0)+'</p>'+
   '<div class="kv"><span class="mut" style="grid-column:1/-1">이렇게 모아요</span><span>판을 끝낼 때마다</span><b>★1~10</b><span>오늘 탭 별 선물</span><b>★10</b><span>광고 제거 구매</span><b>★300</b>'+
-  '<span class="mut" style="grid-column:1/-1;margin-top:8px">이렇게 써요</span><span>별콩이 옷·모자·안경</span><b>★400~2000</b><span>테마 (별콩이 옷 포함)</span><b>★1500</b><span>숫자 색</span><b>★600~1800</b><span>화면 장식</span><b>★500~800</b><span>배경음악 한 곡</span><b>★700</b><span>무한 러시 이어 하기</span><b>★'+REV_PRICE+'</b><span>IQ 도전 힌트 더 받기</span><b>★'+IQH_PRICE+'</b></div>'+
+  '<span class="mut" style="grid-column:1/-1;margin-top:8px">이렇게 써요</span><span>별콩이 옷·모자·안경</span><b>★400~2000</b><span>테마 (별콩이 옷 포함)</span><b>★1000~1500</b><span>숫자 색</span><b>★600~1800</b><span>화면 장식</span><b>★500~800</b><span>배경음악 한 곡</span><b>★700</b><span>무한 러시 이어 하기</span><b>★'+REV_PRICE+'</b><span>IQ 도전 힌트 더 받기</span><b>★'+IQH_PRICE+'</b></div>'+
   '<div class="row" style="margin-top:12px"><button class="btn pri" id="cmShop">꾸미기 가게</button><button class="btn" id="cmX">닫기</button></div>');
   $('cmX').onclick=closeModal;$('cmShop').onclick=()=>{closeModal();if(G&&G.live)return;try{document.querySelector('.tab[data-t="Me"]').click()}catch(e){}}}
 const REV_PRICE=30,IQH_PRICE=20;
@@ -1219,23 +1219,23 @@ document.addEventListener('visibilitychange',()=>{
 window.addEventListener('resize',()=>{if(G&&G.pz&&!$('game').hidden){drawBoard();renderPath()}else banner()});
 
 /* ================= 1.1: 별잇기에서 가져온 것 — 테마 5개 · 배경음악 4곡 · 별콩이 · 꾸미기 · ★ 상점 ================= */
-P.coins=P.coins||0;P.thOwn=P.thOwn||{};P.th=P.th||'night';
+P.coins=P.coins||0;P.thOwn=P.thOwn||{};/* 3.5 (젠다): 기본 테마는 새벽빛, 밤하늘은 ★로 사요. 이미 밤하늘로 하던 사람은 그대로 */if(!P.shop36){P.shop36=1;if(P.th==='night'&&P.games)P.thOwn.night=1}P.th=P.th||'dawn';
 P.cd=Object.assign({on:1,talk:1,look:null,own:{},acc:''},P.cd||{});
 P.bgm=P.bgm==null?1:P.bgm;P.bgmPick=P.bgmPick==null?-1:P.bgmPick;P.deco=P.deco||'';P.decoOwn=P.decoOwn||{};
 
 /* ---------- 테마 (별잇기 6.9 테마를 브레인 별셈 색으로) ---------- */
 const BR_THEMES=[
-  {id:'night',n:'밤하늘',d:'남색 밤하늘과 금빛 숫자',price:0,sw:['#10132e','#232862','#ffd166']},
   {id:'dawn',n:'새벽빛',d:'분홍·보라 새벽 하늘, 밝은 화면',price:0,sw:['#f6eefa','#ffffff','#e08a1e']},
+  {id:'night',n:'밤하늘',d:'남색 밤하늘과 금빛 숫자',price:1000,sw:['#10132e','#232862','#ffd166']},
   {id:'xmas',n:'크리스마스',d:'12월엔 모두 무료, 그 뒤엔 ★500',price:500,sw:['#0c2418','#1f4a34','#ffcf4a'],xmas:1},
   {id:'sakura',n:'밤벚꽃',d:'벚꽃 핀 보랏빛 밤',price:500,sw:['#1f1230','#3a2452','#ff9ec4']},
   {id:'sea',n:'깊은 바다',d:'푸른 바닷속 물빛',price:500,sw:['#06222e','#124556','#5fe3e8']}];
 function thFree(t){return !t.price||(t.xmas&&new Date().getMonth()===11)}
 function thOpen(t){return UNLOCK()||!t.price||(t.xmas&&new Date().getMonth()===11)||!!P.thOwn[t.id]}
 applyTheme=function(){
-  const t=BR_THEMES.find(x=>x.id===P.th)||BR_THEMES[0];if(!thOpen(t))P.th='night';
+  const t=BR_THEMES.find(x=>x.id===P.th)||BR_THEMES[0];if(!thOpen(t))P.th='dawn';
   document.documentElement.dataset.th=P.th;
-  document.body.className=P.theme==='base'?'':'th-'+P.theme;
+  const nt=P.theme&&P.theme!=='base'&&owns('n:'+P.theme)?P.theme:'base';document.body.className=nt==='base'?'':'th-'+nt;
   try{decoDraw()}catch(e){}try{kongRedraw()}catch(e){}
 };
 
@@ -1261,9 +1261,9 @@ const KONG_HATS=[['','없음',0],['nightcap','별 수면모자',0],['bow','분�
   ['crown','반짝 왕관',150],['phones','분홍 헤드폰',150],['wreath','꽃 화관',150],['rudolph','루돌프 머리띠',150]];
 const KONG_ACCS=[['','없음',0],['glasses','동그란 안경',150],['heart','하트 선글라스',150]];
 const KONG_TH_LOOK={night:{c:'gold',o:'',h:'nightcap'},dawn:{c:'lilac',o:'',h:'bow'},xmas:{c:'gold',o:'scarf',h:'santa'},sakura:{c:'pink',o:'',h:'blossom'},sea:{c:'coral',o:'',h:'sailor'}};
-function kongLook(){shopMigrate();const L=P.cd.look;return L&&L.c?L:(KONG_TH_LOOK[P.th]||KONG_TH_LOOK.night)}
+function kongLook(){shopMigrate();const L=P.cd.look;return L&&L.c?L:(KONG_TH_LOOK[P.th]||KONG_TH_LOOK.dawn)}
 /* 3.5 (젠다): 기본 말고는 모두 ★로 사요. 별을 오래 모아야 살 수 있게 비싸게 (하루 ★60~80 정도 모여요) */
-var SHOP={'c:pink':400,'c:coral':400,'o:scarf':500,'h:santa':500,'h:blossom':500,'h:sailor':500,'h:rudolph':800,'h:phones':1000,'h:wreath':1000,'h:crown':2000,'a:glasses':700,'a:heart':900,
+var SHOP={'t:night':1000,'c:pink':400,'c:coral':400,'o:scarf':500,'h:santa':500,'h:blossom':500,'h:sailor':500,'h:rudolph':800,'h:phones':1000,'h:wreath':1000,'h:crown':2000,'a:glasses':700,'a:heart':900,
   't:xmas':1500,'t:sakura':1500,'t:sea':1500,'n:gold':600,'n:neon':900,'n:cyber':1300,'n:magic':1800,'d:snow':500,'d:petals':500,'d:stars':600,'d:lights':800,'m:1':700,'m:2':700,'m:3':700};
 const isDec=()=>new Date().getMonth()===11;
 function price(key){return SHOP[key]||0}
