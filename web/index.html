@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="3.5"</script>
+<script>window.APP_VERSION="3.6"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -341,7 +341,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
       <div class="xpbar"><i id="pXp"></i></div>
       <div class="xptx"><span id="pXpT">0 / 120 XP</span><span id="pNext">다음 칭호 Lv 5</span></div>
     </div>
-    <button class="kongh" id="kongHome" aria-label="큐와 별콩이"><span class="kong-f" data-who="q"></span><span class="kong-f sm2"></span><span class="kbub" id="kongTx">안녕하세요! 저는 별콩이예요.</span></button>
+    <button class="kongh" id="kongHome" aria-label="별콩이"><span class="kong-f"></span><span class="kong-f sm2" hidden></span><span class="kbub" id="kongTx">안녕하세요! 저는 별콩이예요.</span></button>
     <div class="sec">단계 · 깨면 다음 단계가 열려요</div>
     <div class="ai-row" id="aiRow"></div>
     <div class="duo"><button class="mode" id="mLvCalc"><span class="ic" style="background:var(--num);color:#2a1d00">+</span><span class="tx"><b>별셈 퍼즐</b><span id="lvCalcT"></span></span><span class="rt" id="lvCalcR"></span></button>
@@ -392,7 +392,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
 
 <!-- GAME -->
 <section class="scr" id="game" hidden>
-  <div class="top"><button class="back" id="gBack" aria-label="그만하기">‹</button><span class="kong-f sm" id="kongG" data-who="q"></span><span class="md" id="gMode">도전! 별셈왕</span><span class="hp" id="gHp"></span><span class="sc" id="gSc">0</span><button class="coin sm" id="gCoin" aria-label="가진 별">★<b class="coinN">0</b></button></div>
+  <div class="top"><button class="back" id="gBack" aria-label="그만하기">‹</button><span class="kong-f sm" id="kongG"></span><span class="md" id="gMode">도전! 별셈왕</span><span class="hp" id="gHp"></span><span class="sc" id="gSc">0</span><button class="coin sm" id="gCoin" aria-label="가진 별">★<b class="coinN">0</b></button></div>
   <div class="iqb" id="iqBox" hidden><span>당신의 IQ는</span><b id="iqV">100</b><i id="iqD"></i><small>YOUR IQ</small></div>
   <div class="vs" id="vsBox">
     <div class="side"><span class="nm" id="meNm">나</span><div class="pips" id="pipMe"></div></div>
@@ -993,7 +993,7 @@ function vsRec(i){const v=vsb()[i];return v[0]+'승 '+v[1]+'패'}
 /* 3.3 (젠다): 가진 별 ★ 크게 보이기 + 별 쓰는 곳 */
 function coinModal(){modal('<h2>가진 별</h2><p class="c big" style="font-size:40px;color:#ffd166;font-family:var(--fd)">★ '+(P.coins||0)+'</p>'+
   '<div class="kv"><span class="mut" style="grid-column:1/-1">이렇게 모아요</span><span>판을 끝낼 때마다</span><b>★1~10</b><span>오늘 탭 별 선물</span><b>★10</b><span>광고 제거 구매</span><b>★300</b>'+
-  '<span class="mut" style="grid-column:1/-1;margin-top:8px">이렇게 써요</span><span>별콩이 옷·모자·안경</span><b>★400~2000</b><span>테마 (별콩이 옷 포함)</span><b>★1000~1500</b><span>숫자 색</span><b>★600~1800</b><span>화면 장식</span><b>★500~800</b><span>배경음악 한 곡</span><b>★700</b><span>무한 러시 이어 하기</span><b>★'+REV_PRICE+'</b><span>IQ 도전 힌트 더 받기</span><b>★'+IQH_PRICE+'</b></div>'+
+  '<span class="mut" style="grid-column:1/-1;margin-top:8px">이렇게 써요</span><span>큐 캐릭터</span><b>★2000</b><span>별콩이 옷·모자·안경</span><b>★400~2000</b><span>테마 (별콩이 옷 포함)</span><b>★1000~1500</b><span>숫자 색</span><b>★600~1800</b><span>화면 장식</span><b>★500~800</b><span>배경음악 한 곡</span><b>★700</b><span>무한 러시 이어 하기</span><b>★'+REV_PRICE+'</b><span>IQ 도전 힌트 더 받기</span><b>★'+IQH_PRICE+'</b></div>'+
   '<div class="row" style="margin-top:12px"><button class="btn pri" id="cmShop">꾸미기 가게</button><button class="btn" id="cmX">닫기</button></div>');
   $('cmX').onclick=closeModal;$('cmShop').onclick=()=>{closeModal();if(G&&G.live)return;try{document.querySelector('.tab[data-t="Me"]').click()}catch(e){}}}
 const REV_PRICE=30,IQH_PRICE=20;
@@ -1128,7 +1128,7 @@ function settings(){
    '<button class="sr" id="sSnd"><span>효과음</span><span class="r">'+(P.snd?'켬':'끔')+'</span></button>'+
    '<button class="sr" id="sVib"><span>진동</span><span class="r">'+(P.vib?'켬':'끔')+'</span></button>'+
    '<button class="sr" id="sBgm"><span>배경음악</span><span class="r">'+(P.bgm?'켬':'끔')+'</span></button>'+
-   '<button class="sr" id="sKong"><span>큐·별콩이 보이기</span><span class="r">'+(P.cd.on?'켬':'끔')+'</span></button>'+
+   '<button class="sr" id="sKong"><span>캐릭터 보이기</span><span class="r">'+(P.cd.on?'켬':'끔')+'</span></button>'+
    '<button class="sr" id="sTalk"><span>별콩이 말하기 (게임 중)</span><span class="r">'+(P.cd.talk?'켬':'끔')+'</span></button>'+
    (APP&&APP.setNotif?'<button class="sr" id="sNoti"><span>하루 한 번 알림 (저녁 7시 30분)</span><span class="r">'+(nOn?'켬':'끔')+'</span></button>':'')+
    '<button class="sr" id="sAds"><span>광고 제거 · 골드 테마 + ★300 선물</span><span class="r">'+(adsRemoved()?'적용됨':billPrice)+'</span></button>'+
@@ -1263,7 +1263,7 @@ const KONG_ACCS=[['','없음',0],['glasses','동그란 안경',150],['heart','�
 const KONG_TH_LOOK={night:{c:'gold',o:'',h:'nightcap'},dawn:{c:'lilac',o:'',h:'bow'},xmas:{c:'gold',o:'scarf',h:'santa'},sakura:{c:'pink',o:'',h:'blossom'},sea:{c:'coral',o:'',h:'sailor'}};
 function kongLook(){shopMigrate();const L=P.cd.look;return L&&L.c?L:(KONG_TH_LOOK[P.th]||KONG_TH_LOOK.dawn)}
 /* 3.5 (젠다): 기본 말고는 모두 ★로 사요. 별을 오래 모아야 살 수 있게 비싸게 (하루 ★60~80 정도 모여요) */
-var SHOP={'t:night':1000,'c:pink':400,'c:coral':400,'o:scarf':500,'h:santa':500,'h:blossom':500,'h:sailor':500,'h:rudolph':800,'h:phones':1000,'h:wreath':1000,'h:crown':2000,'a:glasses':700,'a:heart':900,
+var SHOP={'x:q':2000,'t:night':1000,'c:pink':400,'c:coral':400,'o:scarf':500,'h:santa':500,'h:blossom':500,'h:sailor':500,'h:rudolph':800,'h:phones':1000,'h:wreath':1000,'h:crown':2000,'a:glasses':700,'a:heart':900,
   't:xmas':1500,'t:sakura':1500,'t:sea':1500,'n:gold':600,'n:neon':900,'n:cyber':1300,'n:magic':1800,'d:snow':500,'d:petals':500,'d:stars':600,'d:lights':800,'m:0':700,'m:1':700,'m:2':700};
 const isDec=()=>new Date().getMonth()===11;
 function price(key){return SHOP[key]||0}
@@ -1283,6 +1283,9 @@ let kongEx='smile';
 const Q_EX={smile:'happy',happy:'smile',excited:'proud',love:'smile',wink:'wink',proud:'proud',think:'think',surprise:'surprise',worry:'sad',sad:'sad',sleepy:'happy'};
 function qHtml(ex){return '<img class="qimg" src="caddy3d/q/'+(Q_EX[ex]||'happy')+'.webp" alt="" draggable="false">'}
 function cdHtml(f,ex){return f.dataset.who==='q'?qHtml(ex):kongHtml(ex)}
+/* 3.5 (젠다): 기본 캐릭터는 별콩이, 큐는 ★2000 (한 달쯤 모아야 해요) */
+function chrQ(){return P.chr==='q'&&owns('x:q')}
+function whoApply(){const q=chrQ()?'q':'',h=$('kongHome');if(h){const f=h.querySelectorAll('.kong-f');f[0].dataset.who=q;if(f[1])f[1].hidden=!q}$('kongG').dataset.who=q;$('kongC').dataset.who=q;kongRedraw()}
 function kongRedraw(){document.querySelectorAll('.kong-f').forEach(f=>{f.innerHTML=cdHtml(f,kongEx)})}
 function kongFace(ex){kongEx=ex;document.querySelectorAll('.kong-f').forEach(f=>{f.innerHTML=cdHtml(f,ex);f.classList.remove('hop');void f.offsetWidth;f.classList.add('hop')})}
 
@@ -1382,7 +1385,9 @@ renderMe=function(){
    '<div class="stat"><div><b>'+P.games+'</b>판</div><div><b>'+P.wins+'</b>승리</div><div><b>★'+P.coins+'</b>가진 별</div></div>'+
    '<div class="sec">내 기록 · 나만 보는 기록이에요</div><div class="lb" id="meRec">'+meRecHtml()+'</div>'+
    '<div class="seg4">'+[['kong','별콩이'],['th','테마'],['num','숫자 색'],['etc','장식·음악']].map(([k,n])=>'<button class="'+(meSec===k?'on':'')+'" data-sec="'+k+'">'+n+'</button>').join('')+'</div>'+
-   (meSec==='kong'?'<div class="kpv"><span class="kong-f big">'+kongHtml('happy')+'</span><div class="mut">별은 판을 끝낼 때마다 모여요. 승부에는 영향이 없어요.</div></div>'+
+   (meSec==='kong'?'<div class="kpv"><span class="kong-f big">'+(chrQ()?qHtml('happy'):kongHtml('happy'))+'</span><div class="mut">별은 판을 끝낼 때마다 모여요. 승부에는 영향이 없어요.</div></div>'+
+     '<div class="sec">캐릭터</div><div class="its"><button class="it'+(chrQ()?'':' on')+'" data-chr="kong"><span class="mini">'+kongHtml('smile')+'</span><small>별콩이</small><em>'+(chrQ()?'고르기':'쓰는 중')+'</em></button><button class="it'+(chrQ()?' on':'')+'" data-chr="q"><span class="mini">'+qHtml('happy')+'</span><small>큐</small><em>'+(owns('x:q')?(chrQ()?'쓰는 중':'고르기'):'★'+price('x:q'))+'</em></button></div>'+
+     (chrQ()?'<p class="mut">큐와 함께 있을 땐 별콩이가 옆에서 작게 따라다녀요. 아래 옷은 별콩이 옷이에요.</p>':'')+
      '<div class="sec">몸 색</div><div class="its">'+kOpt(KONG_COLS,'c',L.c)+'</div><div class="sec">옷</div><div class="its">'+kOpt(KONG_OUTS,'o',L.o)+'</div>'+
      '<div class="sec">모자</div><div class="its">'+kOpt(KONG_HATS,'h',L.h)+'</div><div class="sec">얼굴 장식 (모자와 같이 써요)</div><div class="its">'+kOpt(KONG_ACCS,'a',P.cd.acc)+'</div>'+
      '<button class="btn wide" id="kReset">테마에 맞춰 입기</button>':'')+
@@ -1392,6 +1397,7 @@ renderMe=function(){
    '<div class="sec">칭호 · 레벨과 실력 조건이 다 맞아야 올라가요</div><div class="lb">'+titlesHtml()+'</div>';
   const pg=$('pgMe');
   pg.querySelectorAll('.rec').forEach(b=>b.onclick=()=>recModal(b.dataset.r));
+  pg.querySelectorAll('[data-chr]').forEach(b=>b.onclick=()=>{const c=b.dataset.chr;if(c==='q'&&!owns('x:q'))return buy('큐 캐릭터',price('x:q'),()=>{own('x:q');P.chr='q';whoApply()});P.chr=c;save();whoApply();renderMe()});
   pg.querySelectorAll('[data-sec]').forEach(b=>b.onclick=()=>{meSec=b.dataset.sec;renderMe()});
   pg.querySelectorAll('[data-num]').forEach(b=>b.onclick=()=>{const id=b.dataset.num;if(b.dataset.ok==='0')return note('Lv '+b.dataset.l+'부터 살 수 있어요');
     if(b.dataset.ok==='2')return buy(THEMES.find(t=>t[0]===id)[1]+' 숫자 색',price('n:'+id),()=>{own('n:'+id);P.theme=id;applyTheme()});P.theme=id;save();applyTheme();renderMe()});
@@ -1642,7 +1648,7 @@ function aiPick(){modal('<h2>도전! 별셈왕</h2><p class="c mut">같은 판�
     '</div><div class="row"><button class="btn" id="byN">닫기</button></div>');
   $('byN').onclick=closeModal;$('ovc').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k;if(!aiOpen(k)){note(AIS[k-1].bot+'을 이기면 열려요');return}closeModal();startVs(k)})}
 $('mAi').onclick=aiPick;
-$('bCoin').onclick=coinModal;$('gCoin').onclick=coinModal;coinShow();
+try{whoApply()}catch(e){}$('bCoin').onclick=coinModal;$('gCoin').onclick=coinModal;coinShow();
 P.cs=P.cs||[];for(let k=0;k<5;k++)P.cs[k]=Object.assign({lv:1,clr:0,st:0},P.cs[k]||{});tCheck(true);
 const _gh5=goHome;goHome=function(){IQS=null;return _gh5.apply(this,arguments)};
 $('mIqS').onclick=startIqS;
@@ -1701,13 +1707,13 @@ function rushDemoBoard(){const pz=tutPuzzle(),W=pz.ways,a=W.find(w=>w.key===keyO
   pz.T=[a,b,c].map(w=>({v:14,min:2,sol:w.p,key:null,who:null}));return pz}
 function rushDemo(replay){
   setRnd(null);G={mode:'demo',score:0,combo:0,best:0,solved:0,stage:0};const pz=rushDemoBoard();begin(pz,0);G.live=false;
-  const T3=G.pz.T,tA=T3[0],tB=T3[1],tC=T3[2];$('kongC').dataset.who='q';
+  const T3=G.pz.T,tA=T3[0],tB=T3[1],tC=T3[2];$('kongC').dataset.who=chrQ()?'q':'';
   const reset=(who)=>{clearTimeout(T.fl);delete T.fl;T3.forEach(t=>{t.who=null;t.key=null});(who||[]).forEach(([t,w])=>{t.who=w;t.key=keyOf(t.sol)});path=[];renderHud();renderPath()};
   const draw=(p,from,gap,then)=>{for(let k=from;k<p.length;k++)coAt(450+(k-from)*gap,()=>{path=p.slice(0,k+1);sTap();renderPath()});coAt(450+(p.length-from)*gap+150,then||(()=>{}))};
   const got=(t)=>{t.who='me';t.key=keyOf(t.sol);const kids=$('board').children;for(const i of t.sol)kids[i].classList.add('win');path=[];sWin();renderHud();renderPath();const C=G.pz.B.cells;$('expr').innerHTML='<span class="e" style="color:var(--ok)">'+t.sol.map(i=>C[i].v).join(' ')+' = 14</span><span class="h">정답! 오른쪽 동그라미 하나가 초록이 돼요</span>';toast('+'+(100+40*((t.sol.length+1)/2-2)),'var(--num)')};
   const C0=G.pz.B.cells,ex=p=>p.map(i=>C0[i].v).join(' ');
   coStart([
-    {t:'안녕하세요, 저는 <b>큐</b>예요! <b>브레인 별셈</b>에 온 걸 환영해요. 이게 판이에요. <b style="color:var(--num)">숫자 칸</b>과 <b style="color:var(--op)">연산 칸(+ − × ÷)</b>이 번갈아 있어요.',ex:'happy',spot:'bwrap',run:()=>reset()},
+    {t:'안녕하세요, 저는 <b>'+(chrQ()?'큐':'별콩이')+'</b>예요! <b>브레인 별셈</b>에 온 걸 환영해요. 이게 판이에요. <b style="color:var(--num)">숫자 칸</b>과 <b style="color:var(--op)">연산 칸(+ − × ÷)</b>이 번갈아 있어요.',ex:'happy',spot:'bwrap',run:()=>reset()},
     {t:'오른쪽 위 <b style="color:var(--num)">14</b>가 목표예요. 판에서 이어 그려 14를 만드는 <b>서로 다른 길 3개</b>를 찾으면 돼요. 동그라미 3개가 찾은 길이에요.',ex:'excited',spot:'tgt',run:()=>reset()},
     {t:'숫자에서 시작해 <b>옆 칸(위·아래·왼쪽·오른쪽)</b>으로 이어 그려요. 왼쪽 위 <b>합계</b>에 지금 값이 크게 나와요. <b>4 + 3</b> = 7!',ex:'think',spot:'sumBox',run:()=>{reset();draw(tA.sol.slice(0,3),0,600)}},
     {t:'계산은 <b>앞에서부터 차례로</b>, 계산기처럼요. 이어서 <b>× 2</b> 하면 7 × 2 = <b style="color:var(--num)">14</b>. 합계가 목표가 되는 순간 정답이에요!',ex:'proud',spot:'sumBox',run:()=>{reset();path=tA.sol.slice(0,3);renderPath();draw(tA.sol,3,600,()=>got(tA))}},
