@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="3.4"</script>
+<script>window.APP_VERSION="3.5"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -495,7 +495,7 @@ function titlesHtml(){const st=tStats(),cur=titleIdx();return TITLES.map(([l,n],
 /* 이미 얻은 옛 칭호는 그대로 지켜요 (한 번만) */
 if(!P.tv){P.tv=3;if(P.xp>0){const lv=lvOf(P.xp).lv;let on='';for(const [l,n] of TITLES_OLD)if(lv>=l)on=n;P.tKeep=Math.max(0,TITLES.findIndex(t=>t[1]===on))}save()}
 const THEMES=[['base','기본',1],['gold','골드',3],['neon','네온',6],['cyber','사이버펑크',9],['magic','마법진',13]];
-function applyTheme(){document.body.className=P.theme==='base'?'':'th-'+P.theme}
+function applyTheme(){const t=P.theme&&P.theme!=='base'&&(typeof SHOP==='undefined'||owns('n:'+P.theme))?P.theme:'base';document.body.className=t==='base'?'':'th-'+t}
 const TIERS=[['브론즈',0,'#c98a5a'],['실버',100,'#c4cbe0'],['골드',250,'#ffd166'],['플래티넘',450,'#7ee0d0'],['다이아',700,'#8fb6ff'],['마스터',1000,'#c9a7ff'],['그랜드마스터',1400,'#ff8fa3']];
 function tierOf(rp){let k=0;TIERS.forEach((t,i)=>{if(rp>=t[1])k=i});return k}
 function emblem(k,s=54){const c=TIERS[k][2];const pts=[];const n=k+3;for(let i=0;i<n*2;i++){const a=Math.PI*i/n-Math.PI/2,r=i%2?13:24;pts.push((27+r*Math.cos(a)).toFixed(1)+','+(29+r*Math.sin(a)).toFixed(1))}
@@ -993,7 +993,7 @@ function vsRec(i){const v=vsb()[i];return v[0]+'승 '+v[1]+'패'}
 /* 3.3 (젠다): 가진 별 ★ 크게 보이기 + 별 쓰는 곳 */
 function coinModal(){modal('<h2>가진 별</h2><p class="c big" style="font-size:40px;color:#ffd166;font-family:var(--fd)">★ '+(P.coins||0)+'</p>'+
   '<div class="kv"><span class="mut" style="grid-column:1/-1">이렇게 모아요</span><span>판을 끝낼 때마다</span><b>★1~10</b><span>오늘 탭 별 선물</span><b>★10</b><span>광고 제거 구매</span><b>★300</b>'+
-  '<span class="mut" style="grid-column:1/-1;margin-top:8px">이렇게 써요</span><span>별콩이 옷·모자·장식, 테마</span><b>★200~500</b><span>무한 러시 이어 하기</span><b>★'+REV_PRICE+'</b><span>IQ 도전 힌트 더 받기</span><b>★'+IQH_PRICE+'</b></div>'+
+  '<span class="mut" style="grid-column:1/-1;margin-top:8px">이렇게 써요</span><span>별콩이 옷·모자·안경</span><b>★400~2000</b><span>테마 (별콩이 옷 포함)</span><b>★1500</b><span>숫자 색</span><b>★600~1800</b><span>화면 장식</span><b>★500~800</b><span>배경음악 한 곡</span><b>★700</b><span>무한 러시 이어 하기</span><b>★'+REV_PRICE+'</b><span>IQ 도전 힌트 더 받기</span><b>★'+IQH_PRICE+'</b></div>'+
   '<div class="row" style="margin-top:12px"><button class="btn pri" id="cmShop">꾸미기 가게</button><button class="btn" id="cmX">닫기</button></div>');
   $('cmX').onclick=closeModal;$('cmShop').onclick=()=>{closeModal();if(G&&G.live)return;try{document.querySelector('.tab[data-t="Me"]').click()}catch(e){}}}
 const REV_PRICE=30,IQH_PRICE=20;
@@ -1231,7 +1231,7 @@ const BR_THEMES=[
   {id:'sakura',n:'밤벚꽃',d:'벚꽃 핀 보랏빛 밤',price:500,sw:['#1f1230','#3a2452','#ff9ec4']},
   {id:'sea',n:'깊은 바다',d:'푸른 바닷속 물빛',price:500,sw:['#06222e','#124556','#5fe3e8']}];
 function thFree(t){return !t.price||(t.xmas&&new Date().getMonth()===11)}
-function thOpen(t){return UNLOCK()||thFree(t)||!!P.thOwn[t.id]}
+function thOpen(t){return UNLOCK()||!t.price||(t.xmas&&new Date().getMonth()===11)||!!P.thOwn[t.id]}
 applyTheme=function(){
   const t=BR_THEMES.find(x=>x.id===P.th)||BR_THEMES[0];if(!thOpen(t))P.th='night';
   document.documentElement.dataset.th=P.th;
@@ -1242,7 +1242,7 @@ applyTheme=function(){
 /* ---------- 배경음악: 젠다님 곡 4개 (별잇기와 같은 파일) ---------- */
 const BGM=[['music/dawn.mp3','겨울밤 퍼즐'],['music/xmas.mp3','크리스마스 멜로디'],['music/solves.mp3','크리스마스 풀이'],['music/track4.mp3','별빛 산책']];
 let bgmEl=null,bgmIdx=-1;
-function bgmPickIdx(){if(P.bgmPick>=0)return P.bgmPick;if(bgmIdx<0){P.bgmTurn=((P.bgmTurn||0)+1)%BGM.length;save();bgmIdx=P.bgmTurn}return bgmIdx}
+function bgmPickIdx(){if(P.bgmPick>=0&&owns('m:'+P.bgmPick))return P.bgmPick;if(bgmIdx<0||!owns('m:'+bgmIdx)){const L=BGM.map((b,i)=>i).filter(i=>owns('m:'+i));P.bgmTurn=((P.bgmTurn||0)+1)%L.length;save();bgmIdx=L[P.bgmTurn]}return bgmIdx}
 const BGM_NATIVE=!!(window.AndroidApp&&AndroidApp.bgmPlay);
 function bgmPlay(){if(!P.bgm||document.hidden)return;try{const i=bgmPickIdx();if(BGM_NATIVE){AndroidApp.bgmPlay(BGM[i][0],.38);return}if(!bgmEl){bgmEl=new Audio();bgmEl.loop=true;bgmEl.volume=.38;bgmEl.preload='auto'}
   const src=BGM[i][0];if(!bgmEl.src.endsWith(src))bgmEl.src=src;const p=bgmEl.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}}
@@ -1261,8 +1261,22 @@ const KONG_HATS=[['','없음',0],['nightcap','별 수면모자',0],['bow','분�
   ['crown','반짝 왕관',150],['phones','분홍 헤드폰',150],['wreath','꽃 화관',150],['rudolph','루돌프 머리띠',150]];
 const KONG_ACCS=[['','없음',0],['glasses','동그란 안경',150],['heart','하트 선글라스',150]];
 const KONG_TH_LOOK={night:{c:'gold',o:'',h:'nightcap'},dawn:{c:'lilac',o:'',h:'bow'},xmas:{c:'gold',o:'scarf',h:'santa'},sakura:{c:'pink',o:'',h:'blossom'},sea:{c:'coral',o:'',h:'sailor'}};
-function kongLook(){const L=P.cd.look;return L&&L.c?L:(KONG_TH_LOOK[P.th]||KONG_TH_LOOK.night)}
-function kongOwn(id){if(!id)return true;const it=KONG_HATS.concat(KONG_ACCS).find(x=>x[0]===id);return !it||!it[2]||UNLOCK()||!!P.cd.own[id]||(id==='rudolph'&&new Date().getMonth()===11)}
+function kongLook(){shopMigrate();const L=P.cd.look;return L&&L.c?L:(KONG_TH_LOOK[P.th]||KONG_TH_LOOK.night)}
+/* 3.5 (젠다): 기본 말고는 모두 ★로 사요. 별을 오래 모아야 살 수 있게 비싸게 (하루 ★60~80 정도 모여요) */
+var SHOP={'c:pink':400,'c:coral':400,'o:scarf':500,'h:santa':500,'h:blossom':500,'h:sailor':500,'h:rudolph':800,'h:phones':1000,'h:wreath':1000,'h:crown':2000,'a:glasses':700,'a:heart':900,
+  't:xmas':1500,'t:sakura':1500,'t:sea':1500,'n:gold':600,'n:neon':900,'n:cyber':1300,'n:magic':1800,'d:snow':500,'d:petals':500,'d:stars':600,'d:lights':800,'m:1':700,'m:2':700,'m:3':700};
+const isDec=()=>new Date().getMonth()===11;
+function price(key){return SHOP[key]||0}
+function owns(key){if(UNLOCK()||!price(key)||(P.own2&&P.own2[key]))return true;const [k,v]=key.split(':');
+  if(k==='t')return !!P.thOwn[v]||(v==='xmas'&&isDec());
+  if(k==='h'||k==='a'){if(P.cd&&P.cd.own&&P.cd.own[v])return true;if(v==='rudolph'&&isDec())return true}
+  if(k==='d')return !!P.decoOwn[v];if(k==='n'&&v==='gold'&&adsRemoved())return true;
+  if(k==='c'||k==='o'||k==='h')for(const t in KONG_TH_LOOK){const L=KONG_TH_LOOK[t],th=BR_THEMES.find(x=>x.id===t);if(L[k]===v&&th&&thOpen(th))return true}
+  return false}
+function own(key){P.own2=P.own2||{};P.own2[key]=1}
+/* 예전에 쓰던 것은 그대로 쓸 수 있게 (한 번만) */
+function shopMigrate(){if(P.shop35)return;P.shop35=1;P.own2=P.own2||{};try{const L=P.cd&&P.cd.look;if(L&&L.c){own('c:'+L.c);if(L.o)own('o:'+L.o);if(L.h)own('h:'+L.h)}if(P.theme&&P.theme!=='base')own('n:'+P.theme);if(P.bgmPick>0)own('m:'+P.bgmPick)}catch(e){}}
+function kongOwn(id){if(!id)return true;const it=KONG_HATS.find(x=>x[0]===id);return owns((it?'h:':'a:')+id)}
 function kongHtml(ex,L,acc){L=L||kongLook();const a=acc!=null?acc:P.cd.acc;const k=KONG_EX.includes(ex)?ex:'smile',u=n=>'<img src="caddy3d/l/'+n+'.webp" alt="" draggable="false">';
   return '<span class="cd3l">'+u('body_'+L.c)+(L.o?u('outfit_'+L.o):'')+u('face_'+k)+(a?u('acc_'+a):'')+(L.h?u('hat_'+L.h):'')+'</span>'}
 let kongEx='smile';
@@ -1349,7 +1363,7 @@ function decoSvg(id,i){const r=(9+(i*7)%9);
   if(id==='petals')return '<svg width="'+r*2+'" height="'+r*2+'" viewBox="-10 -10 20 20"><path d="M0 -8 C6 -6 7 3 0 8 C-7 3 -6 -6 0 -8Z" fill="#ff9ec4" fill-opacity=".8" transform="rotate('+(i*47%360)+')"/></svg>';
   if(id==='stars'){const p=[];for(let k=0;k<10;k++){const a=-Math.PI/2+k*Math.PI/5,d=k%2?r*.45:r;p.push((r+Math.cos(a)*d).toFixed(1)+','+(r+Math.sin(a)*d).toFixed(1))}return '<svg width="'+r*2+'" height="'+r*2+'"><polygon points="'+p.join(' ')+'" fill="#ffd166" fill-opacity=".85"/></svg>'}
   return ''}
-function decoDraw(){const el=$('deco');if(!el)return;const id=P.deco;if(!id||!(UNLOCK()||P.decoOwn[id])){el.innerHTML='';return}
+function decoDraw(){const el=$('deco');if(!el)return;const id=P.deco;if(!id||!owns('d:'+id)){el.innerHTML='';return}
   if(id==='lights'){const cols=['#ff6b6b','#ffd166','#5ee6a0','#6ee7f9','#c9a7ff'];let s='<svg width="100%" height="40" viewBox="0 0 400 40" preserveAspectRatio="none"><path d="M0 6 Q50 30 100 8 T200 8 T300 8 T400 6" stroke="#5a5f8a" stroke-width="1.5" fill="none"/>';
     for(let i=0;i<16;i++){const x=12+i*25,y=8+Math.abs(Math.sin(i*0.79))*16;s+='<ellipse cx="'+x+'" cy="'+(y+5)+'" rx="4" ry="6" fill="'+cols[i%5]+'"/>'}el.innerHTML=s+'</svg>';return}
   let h='';for(let i=0;i<14;i++){const x=(i*37+11)%100,y=i<7?(i*13)%9:91+(i*7)%7;h+='<span style="left:'+x+'%;top:'+y+'%">'+decoSvg(id,i)+'</span>'}el.innerHTML=h}
@@ -1358,12 +1372,12 @@ function decoDraw(){const el=$('deco');if(!el)return;const id=P.deco;if(!id||!(U
 let meSec='kong';
 renderMe=function(){
   const lv=lvOf(P.xp).lv,L=kongLook();
-  const nums=THEMES.map(([id,nm,l])=>{const open=UNLOCK()||lv>=l||(id==='gold'&&adsRemoved());return'<button class="it'+(P.theme===id?' on':'')+'" data-num="'+id+'" data-ok="'+(open?1:0)+'" data-l="'+l+'"><span class="sw2 th-'+id+'"><i>7</i><i class="o">×</i><i>3</i></span><small>'+(id==='base'?'테마 기본':nm)+'</small><em>'+(open?(P.theme===id?'쓰는 중':'고르기'):'Lv '+l)+'</em></button>'}).join('');
-  const ths=BR_THEMES.map(t=>{const open=thOpen(t);return'<button class="it'+(P.th===t.id?' on':'')+'" data-th="'+t.id+'"><span class="sw3" style="background:'+t.sw[0]+'"><i style="background:'+t.sw[1]+'"></i><i style="background:'+t.sw[2]+'"></i></span><small>'+t.n+'</small><em>'+(open?(P.th===t.id?'쓰는 중':(thFree(t)&&t.price?'12월 무료':'고르기')):'★'+t.price)+'</em></button>'}).join('');
-  const kOpt=(arr,key,cur)=>arr.map(([v,n,p])=>{const own=key==='c'||key==='o'||kongOwn(v);const prev=key==='c'?{c:v,o:'',h:''}:key==='o'?{c:L.c,o:v,h:''}:key==='h'?{c:L.c,o:'',h:v}:{c:L.c,o:'',h:''};
-    return'<button class="it'+(cur===v?' on':'')+'" data-k="'+key+'" data-v="'+v+'" data-p="'+(p||0)+'"><span class="mini">'+(v||key==='c'?kongHtml('smile',prev,key==='a'?v:''):'✕')+'</span><small>'+n+'</small><em>'+(own?(cur===v?'쓰는 중':'고르기'):'★'+p)+'</em></button>'}).join('');
-  const decos=DECOS.map(([v,n])=>{const own=!v||UNLOCK()||P.decoOwn[v];return'<button class="it'+(P.deco===v?' on':'')+'" data-deco="'+v+'"><span class="mini dm">'+(v==='lights'?'<span style="color:#ffd166">💡</span>':v?decoSvg(v,3):'✕')+'</span><small>'+n+'</small><em>'+(own?(P.deco===v?'쓰는 중':'고르기'):'★200')+'</em></button>'}).join('');
-  const bgm=[[-1,'돌아가며']].concat(BGM.map((b,i)=>[i,b[1]])).map(([i,n])=>'<button class="sr" data-bgm="'+i+'"><span>'+n+'</span><span class="r">'+(P.bgmPick===i?'✓':'')+'</span></button>').join('');
+  const nums=THEMES.map(([id,nm,l])=>{const lvOk=UNLOCK()||lv>=l||(id==='gold'&&adsRemoved()),has=owns('n:'+id),open=lvOk&&has;return'<button class="it'+(P.theme===id?' on':'')+'" data-num="'+id+'" data-ok="'+(open?1:lvOk?2:0)+'" data-l="'+l+'"><span class="sw2 th-'+id+'"><i>7</i><i class="o">×</i><i>3</i></span><small>'+(id==='base'?'테마 기본':nm)+'</small><em>'+(open?(P.theme===id?'쓰는 중':'고르기'):lvOk?'★'+price('n:'+id):'Lv '+l+' · ★'+price('n:'+id))+'</em></button>'}).join('');
+  const ths=BR_THEMES.map(t=>{const open=thOpen(t);return'<button class="it'+(P.th===t.id?' on':'')+'" data-th="'+t.id+'"><span class="sw3" style="background:'+t.sw[0]+'"><i style="background:'+t.sw[1]+'"></i><i style="background:'+t.sw[2]+'"></i></span><small>'+t.n+'</small><em>'+(open?(P.th===t.id?'쓰는 중':(thFree(t)&&t.price?'12월 무료':'고르기')):'★'+price('t:'+t.id))+'</em></button>'}).join('');
+  const kOpt=(arr,key,cur)=>arr.map(([v,n])=>{const has=!v||owns(key+':'+v),p=price(key+':'+v);const prev=key==='c'?{c:v,o:'',h:''}:key==='o'?{c:L.c,o:v,h:''}:key==='h'?{c:L.c,o:'',h:v}:{c:L.c,o:'',h:''};
+    return'<button class="it'+(cur===v?' on':'')+'" data-k="'+key+'" data-v="'+v+'" data-p="'+(p||0)+'"><span class="mini">'+(v||key==='c'?kongHtml('smile',prev,key==='a'?v:''):'✕')+'</span><small>'+n+'</small><em>'+(has?(cur===v?'쓰는 중':'고르기'):'★'+p)+'</em></button>'}).join('');
+  const decos=DECOS.map(([v,n])=>{const own=!v||owns('d:'+v);return'<button class="it'+(P.deco===v?' on':'')+'" data-deco="'+v+'"><span class="mini dm">'+(v==='lights'?'<span style="color:#ffd166">💡</span>':v?decoSvg(v,3):'✕')+'</span><small>'+n+'</small><em>'+(own?(P.deco===v?'쓰는 중':'고르기'):'★'+price('d:'+v))+'</em></button>'}).join('');
+  const bgm=[[-1,'돌아가며 (가진 곡만)']].concat(BGM.map((b,i)=>[i,b[1]])).map(([i,n])=>{const has=i<0||owns('m:'+i);return'<button class="sr" data-bgm="'+i+'"><span>'+n+(i===0?' <small class="mut">기본</small>':'')+'</span><span class="r">'+(has?(P.bgmPick===i?'✓':''):'★'+price('m:'+i))+'</span></button>'}).join('');
   $('pgMe').innerHTML='<div class="prof'+(adsRemoved()?' gold':'')+'">'+profHtml()+'</div>'+
    '<div class="stat"><div><b>'+P.games+'</b>판</div><div><b>'+P.wins+'</b>승리</div><div><b>★'+P.coins+'</b>가진 별</div></div>'+
    '<div class="sec">내 기록 · 나만 보는 기록이에요</div><div class="lb" id="meRec">'+meRecHtml()+'</div>'+
@@ -1379,15 +1393,16 @@ renderMe=function(){
   const pg=$('pgMe');
   pg.querySelectorAll('.rec').forEach(b=>b.onclick=()=>recModal(b.dataset.r));
   pg.querySelectorAll('[data-sec]').forEach(b=>b.onclick=()=>{meSec=b.dataset.sec;renderMe()});
-  pg.querySelectorAll('[data-num]').forEach(b=>b.onclick=()=>{if(b.dataset.ok!=='1')return note('Lv '+b.dataset.l+'에 열려요');P.theme=b.dataset.num;save();applyTheme();renderMe()});
+  pg.querySelectorAll('[data-num]').forEach(b=>b.onclick=()=>{const id=b.dataset.num;if(b.dataset.ok==='0')return note('Lv '+b.dataset.l+'부터 살 수 있어요');
+    if(b.dataset.ok==='2')return buy(THEMES.find(t=>t[0]===id)[1]+' 숫자 색',price('n:'+id),()=>{own('n:'+id);P.theme=id;applyTheme()});P.theme=id;save();applyTheme();renderMe()});
   pg.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{const t=BR_THEMES.find(x=>x.id===b.dataset.th);if(thOpen(t)){P.th=t.id;save();applyTheme();renderMe();return}
-    buy(t.n+' 테마',t.price,()=>{P.thOwn[t.id]=1;P.th=t.id;applyTheme()})});
+    buy(t.n+' 테마 (별콩이 옷 포함)',price('t:'+t.id),()=>{P.thOwn[t.id]=1;P.th=t.id;applyTheme()})});
   pg.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k,v=b.dataset.v,p=+b.dataset.p;
     const put=()=>{if(k==='a'){P.cd.acc=v}else{const cur=Object.assign({},kongLook());cur[k]=v;P.cd.look=cur}save();kongRedraw();renderMe();if(v)say('shop',null,1)};
-    if((k==='h'||k==='a')&&!kongOwn(v)){const it=(k==='h'?KONG_HATS:KONG_ACCS).find(x=>x[0]===v);buy(it[1],p,()=>{P.cd.own[v]=1;put()});return}put()});
+    if(v&&!owns(k+':'+v)){const it={c:KONG_COLS,o:KONG_OUTS,h:KONG_HATS,a:KONG_ACCS}[k].find(x=>x[0]===v);buy(it[1],price(k+':'+v),()=>{own(k+':'+v);put()});return}put()});
   if($('kReset'))$('kReset').onclick=()=>{P.cd.look=null;save();kongRedraw();renderMe()};
-  pg.querySelectorAll('[data-deco]').forEach(b=>b.onclick=()=>{const v=b.dataset.deco;if(v&&!UNLOCK()&&!P.decoOwn[v]){buy(DECOS.find(d=>d[0]===v)[1]+' 장식',200,()=>{P.decoOwn[v]=1;P.deco=v;decoDraw()});return}P.deco=v;save();decoDraw();renderMe()});
-  pg.querySelectorAll('[data-bgm]').forEach(b=>b.onclick=()=>{P.bgmPick=+b.dataset.bgm;bgmIdx=-1;save();if(P.bgm){bgmStop();bgmPlay()}renderMe()});
+  pg.querySelectorAll('[data-deco]').forEach(b=>b.onclick=()=>{const v=b.dataset.deco;if(v&&!owns('d:'+v)){buy(DECOS.find(d=>d[0]===v)[1]+' 장식',price('d:'+v),()=>{P.decoOwn[v]=1;P.deco=v;decoDraw()});return}P.deco=v;save();decoDraw();renderMe()});
+  pg.querySelectorAll('[data-bgm]').forEach(b=>b.onclick=()=>{const i=+b.dataset.bgm;if(i>=0&&!owns('m:'+i))return buy(BGM[i][1]+' 배경음악',price('m:'+i),()=>{own('m:'+i);P.bgmPick=i;bgmIdx=-1;if(P.bgm){bgmStop();bgmPlay()}});P.bgmPick=i;bgmIdx=-1;save();if(P.bgm){bgmStop();bgmPlay()}renderMe()});
 };
 function buy(name,price,onBuy){
   const can=P.coins>=price;
