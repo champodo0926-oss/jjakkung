@@ -1102,14 +1102,25 @@ function misQ(t,lv,r){const ri=(a,b)=>a+Math.floor(r()*(b-a+1)),Q=(q,a,o)=>({q,a
   if(lv===0){const n=ri(2,6)*7+ri(1,6);const a=DAYS[(d0+n)%7];return Q('오늘이 '+DAYS[d0]+'요일이면<br>'+n+'일 뒤는 무슨 요일?',a+'요일',DAYS.filter(x=>x!==a).sort(()=>r()-.5).slice(0,3).concat(a).sort(()=>r()-.5).map(x=>x+'요일'))}
   if(lv===1){const n=ri(80,200);const a=DAYS[(d0+n)%7];return Q('오늘이 '+DAYS[d0]+'요일이면<br>'+n+'일 뒤는 무슨 요일?',a+'요일',DAYS.filter(x=>x!==a).sort(()=>r()-.5).slice(0,3).concat(a).sort(()=>r()-.5).map(x=>x+'요일'))}
   const k=ri(2,5),a=DAYS[((d0-1+1+k)%7+7)%7];return Q('오늘이 '+DAYS[d0]+'요일이에요.<br>"어제의 내일"에서 '+k+'일 뒤는<br>무슨 요일?',a+'요일',DAYS.filter(x=>x!==a).sort(()=>r()-.5).slice(0,3).concat(a).sort(()=>r()-.5).map(x=>x+'요일'))}
-function misMake(k){const r=misRng(hashStr('mis5'+k)),T=misTypes(k);return T.map((t,lv)=>Object.assign(misQ(t,lv,r),{t,lv}))}
+/* 4.3 (젠다): 같은 문제가 다시 나오지 않게. 2026-11-01부터 날마다 차례로 만들면서 지난 1년 문제와 겹치면 다시 만들어요 */
+const MIS_E=dayNo('2026-11-01'),MIS_WIN=365,misC={};
+function misKeyOf(n){return new Date(n*864e5).toISOString().slice(0,10)}
+function misGen(k,seen){const T=misTypes(k),used=new Set(),out=[];let fb=0;
+  for(let l=0;l<MIS_N;l++){const ts=[T[l]].concat([0,1,2,3,4,5].filter(x=>!T.includes(x)),T.filter((x,j)=>j!==l));let q=null,tt=T[l];
+    for(const t of ts){if(t!==T[l]&&used.has(t))continue;for(let att=0;att<40;att++){const c=misQ(t,l,misRng(hashStr('mis6'+k+'|'+l+'|'+t+'|'+att)));if(!seen.has(c.q)){q=c;tt=t;break}}if(q)break}
+    if(!q){q=misQ(T[l],l,misRng(hashStr('mis6'+k+'|'+l)));fb++}used.add(tt);seen.add(q.q);out.push(Object.assign(q,{t:tt,lv:l}))}
+  out.fb=fb;return out}
+function misMake(k){if(misC[k])return misC[k];const n=dayNo(k);if(n<MIS_E)return misGen(k,new Set());
+  let s=n;while(s>MIS_E&&!misC[misKeyOf(s-1)])s--;
+  for(let d=s;d<=n;d++){const seen=new Set();for(let j=Math.max(MIS_E,d-MIS_WIN);j<d;j++){const c=misC[misKeyOf(j)];if(c)c.forEach(x=>seen.add(x.q))}misC[misKeyOf(d)]=misGen(misKeyOf(d),seen)}
+  return misC[k]}
 function misState(){const k=todayKey();if(!P.mis||P.mis.d!==k){const prev=P.mis||{};P.mis={d:k,a:[],n:prev.n||0,last:prev.last||'',best:prev.best||0}}return P.mis}
 /* 4.2 (젠다): 사다리. 맞히면 다음 IQ에 도전할지 고르고, 틀리거나 시간이 끝나거나 그만하면 오늘은 끝 */
 function misOver(m){return m.a.length>=MIS_N||!!m.stop||m.a.includes(0)}
 function misDone(){return misOver(misState())}
 function misStars(m){return m.a.reduce((x,y,i)=>x+(y?MIS_LV[i][1]:0),0)+(m.a.length===MIS_N&&m.a.every(x=>x)?MIS_ALL:0)}
 function misKey(off){const t=new Date();t.setDate(t.getDate()+off);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
-function misTomorrow(){return MIS_T[misTypes(misKey(1))[4]]}
+function misTomorrow(){return MIS_T[misMake(misKey(1))[4].t]}
 function lvTag(lv){return '<span class="lvt l'+lv+'">'+'★'.repeat(lv+1)+'☆'.repeat(4-lv)+' '+MIS_LV[lv][0]+'</span>'}
 /* 4.0 (젠다): 문제를 보는 중에 앱을 나가거나 창을 닫으면 그 문제는 오답, 휴대폰에서는 화면 캡처도 막아요 */
 let misCur=null,misT=0;const MIS_SEC=[60,60,120,180,300];
