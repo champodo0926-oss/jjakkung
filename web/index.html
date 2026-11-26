@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="4.1"</script>
+<script>window.APP_VERSION="4.2"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -47,7 +47,7 @@ input{font-family:var(--fd);font-size:18px;background:var(--ink);color:var(--fg)
 :root[data-th="night"] .iqb,:root[data-th="sea"] .iqb,:root[data-th="sakura"] .iqb,:root[data-th="xmas"] .iqb{--iq:#c7b6ff;background:#2a2160;border-color:#5b47b8}
 .iqb span{font-size:17px;color:var(--iq)}.iqb b{font-size:30px;line-height:1;color:var(--iq);font-variant-numeric:tabular-nums}.iqb i{font-style:normal;font-size:14px;min-width:30px}.iqb small{font-size:11px;color:var(--iq);opacity:.7;letter-spacing:.08em}
 .misq{font-family:var(--fd);font-size:26px;text-align:center;margin:14px 0;line-height:1.5}.misq .qm{color:var(--num);font-size:30px}.misq small{font-family:var(--fb);font-size:13px}
-.lvt{display:inline-block;font-family:var(--fd);font-size:13px;padding:2px 8px;border-radius:9px;background:#e7f7ee;color:#147a45}.lvt.l1{background:#fff3d6;color:#a86400}.lvt.l2{background:#ffe1e1;color:#c0262b}
+.lvt.l0{background:#e3f1ff;color:#1d5fa8}.lvt{display:inline-block;font-family:var(--fd);font-size:13px;padding:2px 8px;border-radius:9px;background:#e7f7ee;color:#147a45}.lvt.l1{background:#e7f7ee;color:#147a45}.lvt.l2{background:#fff3d6;color:#a86400}.lvt.l3{background:#ffe1e1;color:#c0262b}.lvt.l4{background:#efe4ff;color:#6b2fc4}
 .mx{display:grid;width:max-content;grid-template-columns:repeat(3,54px);gap:6px;margin:4px auto}.misq small{display:block;margin-top:4px}.mx i{font-style:normal;background:var(--panel);border-radius:10px;padding:8px 0;font-size:22px}.mx i.qm{color:var(--num)}
 .miso{display:grid;grid-template-columns:1fr 1fr;gap:8px}.miso .btn{font-family:var(--fd);font-size:20px;padding:12px}.miso .btn.ok{background:var(--ok);color:#00261a}.miso .btn.no{background:var(--hot);color:#fff}
 .box.mis{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:2px solid var(--num);color:var(--fg);font:inherit;cursor:pointer;margin-bottom:10px}.box.mis.dn{border-color:var(--line,rgba(127,127,127,.3))}
@@ -1020,13 +1020,41 @@ function iqShow(v){const el=$('iqV'),dl=$('iqD');if(iqCur==null){iqCur=v;el.text
   cancelAnimationFrame(iqRaf);const step=t=>{const k=Math.min(1,(t-t0)/600);el.textContent=Math.round(from+d*(1-Math.pow(1-k,3)));if(k<1)iqRaf=requestAnimationFrame(step)};iqRaf=requestAnimationFrame(step)}
 /* 4.0 (젠다): 오늘의 미션 = IQ 테스트 같은 생각 문제 3개 (쉬움·보통·어려움). 어려울수록 별을 더 줘요 */
 const MIS_T=['수열','3×3 규칙','짝 규칙','다른 하나','도형 식','요일 논리'];
-const MIS_LV=[['쉬움',5],['보통',10],['어려움',20]],MIS_ALL=10;
+const MIS_LV=[['IQ 90',3],['IQ 100',5],['IQ 120',10],['IQ 130',20],['IQ 140 초고난도',30]],MIS_IQ=[90,100,120,130,140],MIS_ALL=15,MIS_N=5;
+/* 4.2 (젠다): 성공하면 축하 한마디 */
+const MIS_YAY=['성공! 몸풀기 완료예요 👏','축하해요! 최고예요 👏','대단해요! 머리가 반짝반짝 ✨','와, 정말 똑똑해요! 🎉','천재 등장! 완벽해요 🏆'];
+function misCheer(i){return '<div class="c" style="margin:4px 0"><span style="position:relative;display:inline-block;width:72px;height:72px">'+(chrQ()?qHtml('proud'):kongHtml('proud'))+'</span><div style="font-family:var(--fd);font-size:19px;color:var(--ok)">'+MIS_YAY[i]+'</div><div class="mut">IQ '+MIS_IQ[i]+' 문제를 풀었어요! ★'+MIS_LV[i][1]+'</div></div>'}
 function misRng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function dayNo(k){const [y,m,d]=k.split('-').map(Number);return Math.floor(Date.UTC(y,m-1,d)/864e5)}
-function misTypes(k){const r=misRng(hashStr('mt'+k)),a=[0,1,2,3,4,5];for(let i=5;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,3)}
+function misTypes(k){const r=misRng(hashStr('mt'+k)),a=[0,1,2,3,4,5];for(let i=5;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,5)}
 function misOpts(ans,r,lo,hi){const o=new Set([ans]);let g=0;while(o.size<4&&g++<300){const d=Math.round(ans+(r()*2-1)*Math.max(3,Math.abs(ans)*.3));if(d!==ans&&d>=lo&&d<=hi)o.add(d)}let k=1;while(o.size<4){if(!o.has(ans+k))o.add(ans+k);k++}return [...o].sort(()=>r()-.5)}
 const DAYS=['월','화','수','목','금','토','일'];
 function misQ(t,lv,r){const ri=(a,b)=>a+Math.floor(r()*(b-a+1)),Q=(q,a,o)=>({q,a:String(a),o:o.map(String)});
+  /* 4.2 (젠다): IQ 140 초고난이도, 4분 */
+  if(lv===4){const CF=[(a,b)=>a+b,(a,b)=>a-b,(a,b)=>a*b,(a,b)=>a*b+a+b,(a,b)=>(a+b)*2,(a,b)=>a*a-b,(a,b)=>a*a+b*b,(a,b)=>(a+b)*(a-b),(a,b)=>a*a+b,(a,b)=>a*b-a-b,(a,b)=>a*a*b,(a,b)=>2**a+b,(a,b)=>(a+b)**2,(a,b)=>a*b+a,(a,b)=>a*b-a,(a,b)=>a*b*2,(a,b)=>a+b*b,(a,b)=>a*b+b,(a,b)=>a*a+a*b];
+    const uniq=(xs,q,f)=>CF.filter(g=>xs.every(x=>g(x[0],x[1])===f(x[0],x[1]))).every(g=>g(q[0],q[1])===f(q[0],q[1]));
+    if(t===0){const k=ri(0,3);let s;if(k===0){const o=ri(-2,3);s=[1,2,3,4,5,6].map(n=>n*n*n+o)}
+      else if(k===1){const a=ri(1,6),f=[1,1,2,3,5,8];s=[a];for(let i=0;i<6;i++)s.push(s[i]+f[i])}
+      else if(k===2){const a=ri(1,4),m=ri(2,3),d=ri(1,5);s=[a];for(let i=1;i<7;i++)s.push(i%2?s[i-1]*m:s[i-1]+d)}
+      else{const a=ri(2,3);s=[a];for(let i=1;i<6;i++)s.push(s[i-1]*(i+1)-1)}
+      const ans=s.pop();return Q(s.join(', ')+', <b class="qm">?</b>',ans,misOpts(ans,r,-99,99999))}
+    if(t===1||t===2){const H=t===1?[(a,b)=>a*a+b*b,(a,b)=>a*b-a-b,(a,b)=>(a+b)**2,(a,b)=>a*a*b,(a,b)=>a*a+a*b]:[(a,b)=>a*a*b,(a,b)=>2**a+b,(a,b)=>a*b*2-(a+b),(a,b)=>a*a-b*b+a,(a,b)=>(a+b)*(a-b)+b];
+      for(let g=0;g<300;g++){const fi=ri(0,H.length-1),f=H[fi],n=t===1?3:4,xs=[];let gg=0;while(xs.length<n&&gg++<200){const a=ri(2,6),b=ri(2,6);if(!xs.some(x=>x[0]===a&&x[1]===b)&&f(a,b)>=0)xs.push([a,b])}if(xs.length<n)continue;
+        const q=xs[n-1],sh=xs.slice(0,n-1);if(!uniq(sh,q,f)||!H.every(h=>!sh.every(x=>h(x[0],x[1])===f(x[0],x[1]))||h(q[0],q[1])===f(q[0],q[1])))continue;const ans=f(q[0],q[1]);
+        if(t===1)return Q('<div class="mx">'+xs.map((x,i)=>[x[0],x[1],f(x[0],x[1])].map((v,j)=>i===2&&j===2?'<i class="qm">?</i>':'<i>'+v+'</i>').join('')).join('')+'</div><small class="mut">가로줄마다 같은 규칙이에요</small>',ans,misOpts(ans,r,0,9999));
+        return Q(sh.map(x=>'('+x[0]+', '+x[1]+') → '+f(x[0],x[1])).join('<br>')+'<br>('+q[0]+', '+q[1]+') → <b class="qm">?</b>',ans,misOpts(ans,r,0,9999))}
+      return misQ(t,3,r)}
+    if(t===3){const dp=n=>(n/10|0)*(n%10),PO=[n=>Number.isInteger(Math.sqrt(n-1)),n=>Number.isInteger(Math.sqrt(n+1))];
+      for(let g=0;g<400;g++){const pk=ri(0,2);let ok,bad,isP;if(pk<2){isP=PO[pk];const A=[],B=[];for(let n=11;n<99;n++)(isP(n)?A:B).push(n);ok=A.sort(()=>r()-.5).slice(0,3);bad=B[Math.floor(r()*B.length)]}
+        else{const k=[12,18,24][ri(0,2)];isP=n=>dp(n)===k;const A=[],B=[];for(let n=11;n<99;n++)if(isP(n))A.push(n);else if(dp(n)>0&&Math.abs(dp(n)-k)<=4)B.push(n);if(A.length<3)continue;ok=A.sort(()=>r()-.5).slice(0,3);bad=B[Math.floor(r()*B.length)]}
+        const four=ok.concat([bad]),RU=PO.concat([n=>n%2===0,n=>n%2===1,n=>n%3===0,n=>n%4===0,n=>n%5===0,n=>n%7===0,n=>n<50,n=>n>=50,n=>n%10===(n/10|0),n=>Number.isInteger(Math.sqrt(n))]);let amb=false;
+        for(const j of ok){const rest=four.filter(x=>x!==j);if(RU.some(f=>rest.every(f)&&!f(j))){amb=true;break}}
+        if(!amb){const sd=n=>(n/10|0)+n%10;for(const j of ok){const rest=four.filter(x=>x!==j);if(rest.every(x=>sd(x)===sd(rest[0]))&&sd(j)!==sd(rest[0])){amb=true;break}}}
+        if(amb)continue;const o=four.sort(()=>r()-.5);return Q('넷 중에서 규칙이 <b>다른 하나</b>는?<br><span class="mut" style="font-size:17px">'+o.join(' · ')+'</span>',bad,o)}
+      return misQ(t,3,r)}
+    if(t===4){const A=ri(2,9),B=ri(2,6),C=ri(2,9);return Q('▲ × ▲ = '+(A*A)+'<br>▲ + ● + ● = '+(A+2*B)+'<br>● × ■ = '+(B*C)+'<br>■ − ▲ = <b class="qm">?</b>',C-A,misOpts(C-A,r,-20,30))}
+    const D=ri(0,6),n=ri(20,60),W=[['그제',-2],['어제',-1],['내일',1],['모레',2]],p1=W[ri(0,3)],p2=W[ri(0,3)],k=ri(2,9),a=DAYS[((D+n+p1[1]+p2[1]+k)%7+7)%7];
+    return Q(n+'일 전은 '+DAYS[D]+'요일이었어요.<br>오늘의 "'+p1[0]+'의 '+p2[0]+'"에서<br>'+k+'일 뒤는 무슨 요일?',a+'요일',DAYS.filter(x=>x!==a).sort(()=>r()-.5).slice(0,3).concat(a).sort(()=>r()-.5).map(x=>x+'요일'))}
   /* 4.1 (젠다): 어려움은 3분 생각할 만큼 */
   if(lv===3){
     if(t===0){const k=ri(0,2);let s;if(k===0){const a=ri(2,5),d=ri(1,3);s=[a];for(let i=0;i<5;i++)s.push(s[i]+d*2**i)}
@@ -1074,39 +1102,44 @@ function misQ(t,lv,r){const ri=(a,b)=>a+Math.floor(r()*(b-a+1)),Q=(q,a,o)=>({q,a
   if(lv===0){const n=ri(2,6)*7+ri(1,6);const a=DAYS[(d0+n)%7];return Q('오늘이 '+DAYS[d0]+'요일이면<br>'+n+'일 뒤는 무슨 요일?',a+'요일',DAYS.filter(x=>x!==a).sort(()=>r()-.5).slice(0,3).concat(a).sort(()=>r()-.5).map(x=>x+'요일'))}
   if(lv===1){const n=ri(80,200);const a=DAYS[(d0+n)%7];return Q('오늘이 '+DAYS[d0]+'요일이면<br>'+n+'일 뒤는 무슨 요일?',a+'요일',DAYS.filter(x=>x!==a).sort(()=>r()-.5).slice(0,3).concat(a).sort(()=>r()-.5).map(x=>x+'요일'))}
   const k=ri(2,5),a=DAYS[((d0-1+1+k)%7+7)%7];return Q('오늘이 '+DAYS[d0]+'요일이에요.<br>"어제의 내일"에서 '+k+'일 뒤는<br>무슨 요일?',a+'요일',DAYS.filter(x=>x!==a).sort(()=>r()-.5).slice(0,3).concat(a).sort(()=>r()-.5).map(x=>x+'요일'))}
-function misMake(k){const r=misRng(hashStr('mis3'+k)),T=misTypes(k);return T.map((t,lv)=>Object.assign(misQ(t,lv+1,r),{t,lv}))}
+function misMake(k){const r=misRng(hashStr('mis5'+k)),T=misTypes(k);return T.map((t,lv)=>Object.assign(misQ(t,lv,r),{t,lv}))}
 function misState(){const k=todayKey();if(!P.mis||P.mis.d!==k){const prev=P.mis||{};P.mis={d:k,a:[],n:prev.n||0,last:prev.last||'',best:prev.best||0}}return P.mis}
-function misDone(){return misState().a.length>=3}
-function misStars(m){return m.a.reduce((x,y,i)=>x+(y?MIS_LV[i][1]:0),0)+(m.a.length===3&&m.a.every(x=>x)?MIS_ALL:0)}
+/* 4.2 (젠다): 사다리. 맞히면 다음 IQ에 도전할지 고르고, 틀리거나 시간이 끝나거나 그만하면 오늘은 끝 */
+function misOver(m){return m.a.length>=MIS_N||!!m.stop||m.a.includes(0)}
+function misDone(){return misOver(misState())}
+function misStars(m){return m.a.reduce((x,y,i)=>x+(y?MIS_LV[i][1]:0),0)+(m.a.length===MIS_N&&m.a.every(x=>x)?MIS_ALL:0)}
 function misKey(off){const t=new Date();t.setDate(t.getDate()+off);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
-function misTomorrow(){return MIS_T[misTypes(misKey(1))[2]]}
-function lvTag(lv){return '<span class="lvt l'+lv+'">'+'★'.repeat(lv+1)+'☆'.repeat(2-lv)+' '+MIS_LV[lv][0]+'</span>'}
+function misTomorrow(){return MIS_T[misTypes(misKey(1))[4]]}
+function lvTag(lv){return '<span class="lvt l'+lv+'">'+'★'.repeat(lv+1)+'☆'.repeat(4-lv)+' '+MIS_LV[lv][0]+'</span>'}
 /* 4.0 (젠다): 문제를 보는 중에 앱을 나가거나 창을 닫으면 그 문제는 오답, 휴대폰에서는 화면 캡처도 막아요 */
-let misCur=null,misT=0;const MIS_SEC=[60,120,180];
+let misCur=null,misT=0;const MIS_SEC=[60,60,120,180,240];
 function misStop(){clearInterval(misT);misT=0}
 /* 4.0 (젠다): 휴대폰에서 앱 전체 화면 캡처 막기. 시험용 APK에서는 캡처 허용 (젠다: 테스트할 땐 풀어야지) */
 function misSecure(on){try{window.AndroidApp&&AndroidApp.secure&&AndroidApp.secure(!TEST_UNLOCK_ALL)}catch(e){}}
 function misAbandon(why){misStop();if(misCur==null)return;const m=misState();if(m.a.length===misCur){m.a.push(0);save();if(why)setTimeout(()=>note(why),300)}misCur=null;misSecure(false)}
 const _cmMis=closeModal;closeModal=function(){misAbandon('문제를 닫아서 오답이 됐어요');return _cmMis.apply(this,arguments)};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&misCur!=null){misAbandon();P.misLeft=1;save();_cmMis()}else if(!document.hidden&&P.misLeft){P.misLeft=0;save();setTimeout(()=>note('앱을 나가서 그 문제는 오답이 됐어요'),400)}});
-function misIntro(){const m=misState();modal('<h2>🎯 오늘의 미션</h2><p class="c">IQ 테스트처럼 생각하는 문제 3개!</p><div class="kv" style="margin:8px 0">'+[0,1,2].map(i=>'<span>'+lvTag(i)+' <small class="mut">'+(i+1)+'분</small></span><b>★'+MIS_LV[i][1]+'</b>').join('')+'<span>다 맞히면</span><b>+★'+MIS_ALL+'</b></div><p class="c mut" style="font-size:13px">문제를 보는 중에 앱을 나가거나 창을 닫으면<br>그 문제는 오답이 돼요. 날마다 새 문제가 나와요.</p><div class="row"><button class="btn pri" id="mpGo">'+(m.a.length?'이어서 풀기':'시작하기')+'</button><button class="btn" id="mpNo">나중에</button></div>');
+function misIntro(){const m=misState();modal('<h2>🎯 오늘의 미션</h2><p class="c">IQ 90부터 140까지, 한 계단씩 도전!</p><div class="kv" style="margin:8px 0">'+[0,1,2,3,4].map(i=>'<span>'+lvTag(i)+' <small class="mut">'+(MIS_SEC[i]/60)+'분</small></span><b>★'+MIS_LV[i][1]+'</b>').join('')+'<span>IQ 140까지 다 풀면</span><b>+★'+MIS_ALL+'</b></div><p class="c mut" style="font-size:13px">문제를 보는 중에 앱을 나가거나 창을 닫으면<br>그 문제는 오답이 돼요. 맞히면 다음 IQ에 도전할지 골라요.<br>틀리거나 시간이 끝나면 오늘 미션은 끝, 그때까지 받은 별은 그대로예요.<br>IQ 숫자는 재미로 보는 난이도예요.</p><div class="row"><button class="btn pri" id="mpGo">'+(m.a.length?'이어서 풀기':'시작하기')+'</button><button class="btn" id="mpNo">나중에</button></div>');
   $('mpGo').onclick=()=>{m.go=1;misOpen(1)};$('mpNo').onclick=_cmMis}
 function misOpen(go){const m=misState(),k=m.d,Q=misMake(k);const i=m.a.length;
-  if(i>=3)return misEnd();if(go!==1)return misIntro();const it=Q[i],dt=new Date();
-  modal('<h2>오늘의 미션 <span class="mut" style="font-size:14px">'+(dt.getMonth()+1)+'/'+dt.getDate()+' · '+(i+1)+'/3</span></h2><p class="c">'+lvTag(it.lv)+' <span class="mut">'+MIS_T[it.t]+' · 맞히면 ★'+MIS_LV[it.lv][1]+'</span></p><div class="misq">'+it.q+'</div><div class="miso">'+it.o.map(o=>'<button class="btn" data-o="'+o+'">'+o+'</button>').join('')+'</div><p class="c" id="misTm" style="font-family:var(--fd);font-size:20px">⏱ '+Math.floor(MIS_SEC[it.lv]/60)+':00</p><p class="c mut" id="misMsg">한 번만 고를 수 있어요. 시간 안에 골라요</p><button class="btn wide" id="misX">포기하기 (오답)</button>');
+  if(misOver(m))return misEnd();if(go!==1)return misIntro();const it=Q[i],dt=new Date();
+  modal('<h2>오늘의 미션 <span class="mut" style="font-size:14px">'+(dt.getMonth()+1)+'/'+dt.getDate()+' · '+(i+1)+'/'+MIS_N+'</span></h2><p class="c">'+lvTag(it.lv)+' <span class="mut">'+MIS_T[it.t]+' · 맞히면 ★'+MIS_LV[it.lv][1]+'</span></p><div class="misq">'+it.q+'</div><div class="miso">'+it.o.map(o=>'<button class="btn" data-o="'+o+'">'+o+'</button>').join('')+'</div><p class="c" id="misTm" style="font-family:var(--fd);font-size:20px">⏱ '+Math.floor(MIS_SEC[it.lv]/60)+':00</p><p class="c mut" id="misMsg">한 번만 고를 수 있어요. 시간 안에 골라요</p><button class="btn wide" id="misX">포기하기 (오답)</button>');
   misCur=i;misSecure(true);$('misX').onclick=closeModal;
   const end=Date.now()+MIS_SEC[it.lv]*1000;misStop();misT=setInterval(()=>{const left=Math.max(0,Math.ceil((end-Date.now())/1000)),el=$('misTm');if(!el||misCur!==i){misStop();return}
     el.textContent='⏱ '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0');if(left<=10)el.style.color='var(--hot)';
     if(left<=0){misStop();misCur=null;misSecure(false);m.a.push(0);save();sLose();$('ovc').querySelectorAll('[data-o]').forEach(x=>{x.disabled=true;if(x.dataset.o===it.a)x.classList.add('ok')});
-      $('misMsg').innerHTML='<b style="color:var(--hot)">시간이 끝났어요. 정답은 '+it.a+'</b>';$('misX').textContent=i<2?'다음 문제':'결과 보기';$('misX').classList.add('pri');$('misX').onclick=()=>misOpen(1)}},1000);
+      $('misMsg').innerHTML='<b style="color:var(--hot)">시간이 끝났어요. 정답은 '+it.a+'</b>';misNext(m,i,0)}},1000);
   $('ovc').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{if(m.a.length>i)return;misStop();misCur=null;misSecure(false);const ok=b.dataset.o===it.a;m.a.push(ok?1:0);if(ok){P.coins+=MIS_LV[it.lv][1];sWin()}else{sLose();buzz(40)}save();
     $('ovc').querySelectorAll('[data-o]').forEach(x=>{x.disabled=true;if(x.dataset.o===it.a)x.classList.add('ok');else if(x===b)x.classList.add('no')});
-    $('misMsg').innerHTML=ok?'<b style="color:var(--ok)">정답! ★'+MIS_LV[it.lv][1]+'</b>':'<b style="color:var(--hot)">아쉬워요. 정답은 '+it.a+'</b>';
-    $('misX').textContent=i<2?'다음 문제':'결과 보기';$('misX').classList.add('pri');$('misX').onclick=()=>misOpen(1)})}
-function misEnd(){const m=misState(),ok=m.a.reduce((x,y)=>x+y,0),all=ok===3;if(!m.fin){m.fin=1;const yk=misKey(-1);
+    $('misMsg').innerHTML=ok?misCheer(it.lv):'<b style="color:var(--hot)">아쉬워요. 정답은 '+it.a+'</b>';
+    misNext(m,i,ok)})}
+function misNext(m,i,ok){const x=$('misX');if(!x)return;if(ok&&i<MIS_N-1){x.textContent='다음 도전! IQ '+MIS_IQ[i+1]+' ('+(MIS_SEC[i+1]/60)+'분 · ★'+MIS_LV[i+1][1]+')';const g=$('misMsg');if(g)g.insertAdjacentHTML('beforeend','<p class="c" style="margin-top:6px"><b>다음 도전을 이어서 할까요?</b></p>');x.classList.add('pri');x.onclick=()=>misOpen(1);
+    const y=document.createElement('button');y.className='btn wide';y.style.marginTop='8px';y.textContent='오늘은 여기까지';y.onclick=()=>{m.stop=1;save();misEnd()};x.after(y)}
+  else{if(!ok){const g=$('misMsg');if(g)g.insertAdjacentHTML('beforeend','<br><span class="mut">오늘 도전은 여기까지예요</span>')}x.textContent='결과 보기';x.classList.add('pri');x.onclick=()=>misOpen(1)}}
+function misEnd(){const m=misState(),ok=m.a.reduce((x,y)=>x+y,0),all=ok===MIS_N;if(!m.fin){m.fin=1;const yk=misKey(-1);
     m.n=m.last===yk?(m.n||0)+1:1;m.last=m.d;m.best=Math.max(m.best||0,m.n);if(all)P.coins+=MIS_ALL;recAdd('mis',{ok,st:misStars(m)});save();if(ok)sBig()}
-  modal('<h2>오늘의 미션 '+(all?'완벽해요!':'완료')+'</h2><div class="kv">'+m.a.map((x,i)=>'<span>'+lvTag(i)+'</span><b style="color:'+(x?'var(--ok)':'var(--hot)')+'">'+(x?'정답 ★'+MIS_LV[i][1]:'오답')+'</b>').join('')+(all?'<span>다 맞힌 보너스</span><b>★'+MIS_ALL+'</b>':'')+'<span>얻은 별</span><b>★'+misStars(m)+'</b><span>연속 미션</span><b>'+m.n+'일</b></div>'+
-    '<div class="box c" style="margin-top:12px"><p class="mut">내일의 어려운 문제</p><p style="font-family:var(--fd);font-size:20px">🔮 '+misTomorrow()+'</p><p class="mut">내일 새 문제가 기다려요!</p></div><button class="btn pri wide" id="misOk" style="margin-top:10px">확인</button>');
+  modal('<h2>오늘의 미션 '+(all?'완벽해요!':'완료')+'</h2><div class="kv">'+MIS_IQ.map((_,i)=>{const x=m.a[i];return '<span>'+lvTag(i)+'</span><b style="color:'+(x?'var(--ok)':x===0?'var(--hot)':'var(--mute)')+'">'+(x?'정답 ★'+MIS_LV[i][1]:x===0?'오답':'도전 안 함')+'</b>'}).join('')+(all?'<span>IQ 140 완주 보너스</span><b>★'+MIS_ALL+'</b>':'')+'<span>얻은 별</span><b>★'+misStars(m)+'</b><span>연속 미션</span><b>'+m.n+'일</b></div>'+(m.a.some(x=>x)?'<p class="c" style="margin-top:10px;font-size:18px">🎉 오늘 <b style="color:var(--iq,#8b5cf6)">IQ '+MIS_IQ[m.a.reduce((b,x,i)=>x?i:b,0)]+'</b> 문제를 풀었어요!</p>':'')+
+    '<div class="box c" style="margin-top:12px"><p class="mut">내일의 IQ 140 초고난도</p><p style="font-family:var(--fd);font-size:20px">🔮 '+misTomorrow()+'</p><p class="mut">내일 새 문제가 기다려요!</p></div><button class="btn pri wide" id="misOk" style="margin-top:10px">확인</button>');
   $('misOk').onclick=()=>{_cmMis();try{renderDay()}catch(e){}}}
 setTimeout(()=>misSecure(false),300);
 function misAuto(){try{if(!P.seen||!P.games||G||$('home').hidden||!$('ov').hidden||misDone())return;const k=todayKey();if(P.misPop===k)return;P.misPop=k;save();misIntro()}catch(e){}}
@@ -1161,7 +1194,7 @@ function renderPlay(){try{seasonRoll()}catch(e){}
   $('rankRt').innerHTML=TIERS[tierOf(P.rp)][0]+'<br><span class="mut">'+P.rp+' RP</span>';
   $('frRt').innerHTML=P.fr&&(P.fr.w+P.fr.l+(P.fr.d||0))?emblem(tierOf(P.rp),26)+'<br>'+TIERS[tierOf(P.rp)][0]:'';
 }
-function renderDay(){try{const m=misState(),dn=m.a.length>=3;$('misCard').innerHTML='<span class="mi">🎯</span><span class="mt"><b>오늘의 미션 · IQ 퀴즈</b><small>'+(dn?'★'+misStars(m)+' 얻음 · 연속 '+m.n+'일 · 내일 🔮 '+misTomorrow():m.a.length?(m.a.length+'/3 풀었어요 · 이어서 풀기'):'쉬움 ★5 · 보통 ★10 · 어려움 ★20')+'</small></span><span class="mr">'+(dn?'완료':'풀기 ›')+'</span>';$('misCard').classList.toggle('dn',dn);$('misCard').onclick=misOpen}catch(e){}
+function renderDay(){try{const m=misState(),dn=misOver(m);$('misCard').innerHTML='<span class="mi">🎯</span><span class="mt"><b>오늘의 미션 · IQ 퀴즈</b><small>'+(dn?'★'+misStars(m)+' 얻음 · 연속 '+m.n+'일 · 내일 🔮 '+misTomorrow():m.a.length?('IQ '+MIS_IQ[m.a.length-1]+' 통과 · IQ '+MIS_IQ[m.a.length]+' 도전하기'):'IQ 90 → 100 → 120 → 130 → 140')+'</small></span><span class="mr">'+(dn?'완료':'풀기 ›')+'</span>';$('misCard').classList.toggle('dn',dn);$('misCard').onclick=misOpen}catch(e){}
   const k=todayKey();$('dStreak').textContent=P.streak.last===k||isYesterday(P.streak.last)?P.streak.n:0;$('dToday').textContent=P.day[k]||'-';
   $('dBest').textContent=Math.max(0,...Object.values(P.day));
   $('mDay').textContent=P.day[k]?'오늘의 러시 다시 하기':'오늘의 러시 시작';
