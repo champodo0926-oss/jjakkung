@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="4.6"</script>
+<script>window.APP_VERSION="4.7"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -47,7 +47,7 @@ input{font-family:var(--fd);font-size:18px;background:var(--ink);color:var(--fg)
 :root[data-th="night"] .iqb,:root[data-th="sea"] .iqb,:root[data-th="sakura"] .iqb,:root[data-th="xmas"] .iqb{--iq:#c7b6ff;background:#2a2160;border-color:#5b47b8}
 .iqb span{font-size:17px;color:var(--iq)}.iqb b{font-size:30px;line-height:1;color:var(--iq);font-variant-numeric:tabular-nums}.iqb i{font-style:normal;font-size:14px;min-width:30px}.iqb small{font-size:11px;color:var(--iq);opacity:.7;letter-spacing:.08em}
 .misq{font-family:var(--fd);font-size:26px;text-align:center;margin:14px 0;line-height:1.5}.misq .qm{color:var(--num);font-size:30px}.misq small{font-family:var(--fb);font-size:13px}
-.lvt.l0{background:#e3f1ff;color:#1d5fa8}.lvt{display:inline-block;font-family:var(--fd);font-size:13px;padding:2px 8px;border-radius:9px;background:#e7f7ee;color:#147a45}.lvt.l1{background:#e7f7ee;color:#147a45}.lvt.l2{background:#fff3d6;color:#a86400}.lvt.l3{background:#ffe1e1;color:#c0262b}.lvt.l4{background:#efe4ff;color:#6b2fc4}
+.lvt.lvbig{font-size:30px;padding:8px 22px;border-radius:18px;letter-spacing:.5px}.lvt.l0{background:#e3f1ff;color:#1d5fa8}.lvt{display:inline-block;font-family:var(--fd);font-size:13px;padding:2px 8px;border-radius:9px;background:#e7f7ee;color:#147a45}.lvt.l1{background:#e7f7ee;color:#147a45}.lvt.l2{background:#fff3d6;color:#a86400}.lvt.l3{background:#ffe1e1;color:#c0262b}.lvt.l4{background:#efe4ff;color:#6b2fc4}
 .mx{display:grid;width:max-content;grid-template-columns:repeat(3,54px);gap:6px;margin:4px auto}.misq small{display:block;margin-top:4px}.mx i{font-style:normal;background:var(--panel);border-radius:10px;padding:8px 0;font-size:22px}.mx i.qm{color:var(--num)}
 .miso{display:grid;grid-template-columns:1fr 1fr;gap:8px}.miso .btn{font-family:var(--fd);font-size:20px;padding:12px}.miso .btn.ok{background:var(--ok);color:#00261a}.miso .btn.no{background:var(--hot);color:#fff}
 .box.mis{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:2px solid var(--num);color:var(--fg);font:inherit;cursor:pointer;margin-bottom:10px}.box.mis.dn{border-color:var(--line,rgba(127,127,127,.3))}
@@ -1153,7 +1153,7 @@ function misIntro(){const m=misState();modal('<h2>🎯 오늘의 미션</h2><p c
   $('mpGo').onclick=()=>{m.go=1;misOpen(1)};$('mpNo').onclick=_cmMis}
 function misOpen(go){const m=misState(),k=m.d,Q=misMake(k);const i=m.a.length;
   if(misOver(m))return misEnd();if(go!==1)return misIntro();const it=Q[i],dt=new Date();
-  modal('<h2>오늘의 미션 <span class="mut" style="font-size:14px">'+(dt.getMonth()+1)+'/'+dt.getDate()+' · '+(i+1)+'/'+MIS_N+'</span></h2><p class="c">'+lvTag(it.lv)+' <span class="mut">'+MIS_T[it.t]+' · 맞히면 ★'+MIS_LV[it.lv][1]+'</span></p><div class="misq">'+it.q+'</div><div class="miso">'+it.o.map(o=>'<button class="btn" data-o="'+o+'">'+o+'</button>').join('')+'</div><p class="c" id="misTm" style="font-family:var(--fd);font-size:20px">⏱ '+Math.floor(MIS_SEC[it.lv]/60)+':00</p><p class="c mut" id="misMsg">한 번만 고를 수 있어요. 시간 안에 골라요</p><button class="btn wide" id="misX">포기하기 (오답)</button>');
+  modal('<h2>오늘의 미션 <span class="mut" style="font-size:14px">'+(dt.getMonth()+1)+'/'+dt.getDate()+' · '+(i+1)+'/'+MIS_N+'</span></h2><div class="c"><span class="lvt l'+it.lv+' lvbig">IQ '+MIS_IQ[it.lv]+' 도전'+(it.lv===4?' 🔥':'')+'</span><p class="mut" style="margin-top:6px">'+'★'.repeat(it.lv+1)+'☆'.repeat(4-it.lv)+' · '+MIS_T[it.t]+' · 맞히면 ★'+MIS_LV[it.lv][1]+'</p></div><div class="misq">'+it.q+'</div><div class="miso">'+it.o.map(o=>'<button class="btn" data-o="'+o+'">'+o+'</button>').join('')+'</div><p class="c" id="misTm" style="font-family:var(--fd);font-size:20px">⏱ '+Math.floor(MIS_SEC[it.lv]/60)+':00</p><p class="c mut" id="misMsg">한 번만 고를 수 있어요. 시간 안에 골라요</p><button class="btn wide" id="misX">포기하기 (오답)</button>');
   misCur=i;misSecure(true);$('misX').onclick=closeModal;
   const end=Date.now()+MIS_SEC[it.lv]*1000;misStop();misT=setInterval(()=>{const left=Math.max(0,Math.ceil((end-Date.now())/1000)),el=$('misTm');if(!el||misCur!==i){misStop();return}
     el.textContent='⏱ '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0');if(left<=10)el.style.color='var(--hot)';
