@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="4.3"</script>
+<script>window.APP_VERSION="4.4"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -376,7 +376,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
   </div>
 
   <div class="page" id="pgRank" hidden>
-    <div class="seg"><button id="rkS" class="on">이번 시즌</button><button id="rkR">한판 승부</button></div>
+    <div class="seg" style="grid-template-columns:1fr 1fr 1fr"><button id="rkS" class="on">이번 시즌</button><button id="rkR">한판 승부</button><button id="rkQ">퀴즈왕</button></div>
     <div class="box tier" id="rkMe"></div>
     <div class="lb" id="rkList"></div>
   </div>
@@ -918,7 +918,7 @@ async function net(){if(!ONLINE())return false;if(DB)return true;try{DB=await cl
 async function syncOnline(){try{seasonRoll()}catch(e){}
   if(!(await net()))return;
   try{await DB.doc('players/'+ME).set({nick:P.nick.slice(0,12),rp:P.rp,lv:lvOf(P.xp).lv,fw:(P.fr&&P.fr.w)||0,fd:(P.fr&&P.fr.d)||0,fl:(P.fr&&P.fr.l)||0,rs:(P.rs&&P.rs.id)||'',sw:(P.rs&&P.rs.w)||0,sd:(P.rs&&P.rs.d)||0,sl:(P.rs&&P.rs.l)||0,at:Date.now()})}catch(e){}
-  try{if(P.ss.id&&P.ss.sc>0)await DB.doc('seasons/'+P.ss.id+'/p/'+ME).set({n:P.nick.slice(0,12),sc:P.ss.sc,k:tierOf(P.rp),lv:lvOf(P.xp).lv,at:Date.now()})}catch(e){}
+  try{const mk=monthKey(),sc=P.ss.id===mk?P.ss.sc:0,qz=(P.qz&&P.qz.id===mk)?P.qz.sc:0;if(sc>0||qz>0)await DB.doc('seasons/'+mk+'/p/'+ME).set({n:P.nick.slice(0,12),sc,qz,qn:(P.qz&&P.qz.id===mk)?P.qz.n:0,k:tierOf(P.rp),lv:lvOf(P.xp).lv,at:Date.now()})}catch(e){}
 }
 
 /* ---- live match (ranked + friend). Host decides every round, guest claims. ---- */
@@ -1023,7 +1023,7 @@ const MIS_T=['수열','3×3 규칙','짝 규칙','다른 하나','도형 식','�
 const MIS_LV=[['IQ 90',3],['IQ 100',5],['IQ 120',10],['IQ 130',20],['IQ 140 초고난도',30]],MIS_IQ=[90,100,120,130,140],MIS_ALL=15,MIS_N=5;
 /* 4.2 (젠다): 성공하면 축하 한마디 */
 const MIS_YAY=['성공! 몸풀기 완료예요 👏','축하해요! 최고예요 👏','대단해요! 머리가 반짝반짝 ✨','와, 정말 똑똑해요! 🎉','천재 등장! 완벽해요 🏆'];
-function misCheer(i){return '<div class="c" style="margin:4px 0"><span style="position:relative;display:inline-block;width:72px;height:72px">'+(chrQ()?qHtml('proud'):kongHtml('proud'))+'</span><div style="font-family:var(--fd);font-size:19px;color:var(--ok)">'+MIS_YAY[i]+'</div><div class="mut">IQ '+MIS_IQ[i]+' 문제를 풀었어요! ★'+MIS_LV[i][1]+'</div></div>'}
+function misCheer(i){return '<div class="c" style="margin:4px 0"><span style="position:relative;display:inline-block;width:72px;height:72px">'+(chrQ()?qHtml('proud'):kongHtml('proud'))+'</span><div style="font-family:var(--fd);font-size:19px;color:var(--ok)">'+MIS_YAY[i]+'</div><div class="mut">IQ '+MIS_IQ[i]+' 문제를 풀었어요! ★'+MIS_LV[i][1]+' · 퀴즈 +'+QZ_PT[i]+'점</div></div>'}
 function misRng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function dayNo(k){const [y,m,d]=k.split('-').map(Number);return Math.floor(Date.UTC(y,m-1,d)/864e5)}
 function misTypes(k){const r=misRng(hashStr('mt'+k)),a=[0,1,2,3,4,5];for(let i=5;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,5)}
@@ -1116,6 +1116,18 @@ function misMake(k){if(misC[k])return misC[k];const n=dayNo(k);if(n<MIS_E)return
   return misC[k]}
 function misState(){const k=todayKey();if(!P.mis||P.mis.d!==k){const prev=P.mis||{};P.mis={d:k,a:[],n:prev.n||0,last:prev.last||'',best:prev.best||0}}return P.mis}
 /* 4.2 (젠다): 사다리. 맞히면 다음 IQ에 도전할지 고르고, 틀리거나 시간이 끝나거나 그만하면 오늘은 끝 */
+/* 4.4 (젠다): 미션 점수 → 이번 달 퀴즈왕. 계단마다 점수, 매달 1일 새로 시작, 지난달 1등은 퀴즈왕 👑 */
+const QZ_PT=[10,20,30,50,80];
+function qzCur(){const mk=monthKey();if(!P.qz||P.qz.id!==mk)P.qz={id:mk,sc:0,n:0};return P.qz}
+function qzAdd(lv){const q=qzCur();q.sc+=QZ_PT[lv]}
+function prevMonthKey(){const [y,m]=monthKey().split('-').map(Number);return m===1?(y-1)+'-12':y+'-'+String(m-1).padStart(2,'0')}
+let qzKingN=null;
+async function qzCheck(){if(!ONLINE()||!(await net()))return;const pk=prevMonthKey();
+  try{const q=await DB.collection('seasons/'+pk+'/p').orderBy('qz').limit(5).get();const rows=q.docs.map(d=>({id:d.id,...d.data()})).filter(r=>(r.qz||0)>0).sort((a,b)=>(b.qz||0)-(a.qz||0));
+    qzKingN=rows[0]?{n:rows[0].n||'?',sc:rows[0].qz,me:rows[0].id===ME,mk:pk}:{n:'',mk:pk};try{renderDay()}catch(e){}
+    if(P.qzChk!==pk){P.qzChk=pk;if(rows[0]&&rows[0].id===ME){P.qzKing=P.qzKing||[];if(!P.qzKing.includes(pk))P.qzKing.unshift(pk);save();setTimeout(qzWinModal,900)}else save()}}catch(e){}}
+function qzWinModal(){const pk=(P.qzKing||[])[0];if(!pk)return;sBig();modal('<h2>👑 축하해요!</h2><div class="c"><span style="position:relative;display:inline-block;width:96px;height:96px">'+(chrQ()?qHtml('proud'):kongHtml('proud'))+'</span></div><p class="c" style="font-family:var(--fd);font-size:21px">당신은 '+ssName(pk)+' 퀴즈왕입니다!</p><p class="mut c">한 달 동안 오늘의 미션 점수가 가장 높았어요.<br>내 정보에 퀴즈왕 👑 배지가 생겼어요.</p><button class="btn pri wide" id="qwOk">고마워요!</button>');$('qwOk').onclick=closeModal}
+function qzLine(){const q=qzCur(),k=qzKingN;return '<span class="mut" style="font-size:12.5px;display:block;margin-top:2px">이번 달 퀴즈 점수 '+q.sc+'점'+(k&&k.n?' · '+ssName(k.mk)+' 퀴즈왕 👑 '+esc(k.n):'')+'</span>'}
 function misOver(m){return m.a.length>=MIS_N||!!m.stop||m.a.includes(0)}
 function misDone(){return misOver(misState())}
 function misStars(m){return m.a.reduce((x,y,i)=>x+(y?MIS_LV[i][1]:0),0)+(m.a.length===MIS_N&&m.a.every(x=>x)?MIS_ALL:0)}
@@ -1140,7 +1152,7 @@ function misOpen(go){const m=misState(),k=m.d,Q=misMake(k);const i=m.a.length;
     el.textContent='⏱ '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0');if(left<=10)el.style.color='var(--hot)';
     if(left<=0){misStop();misCur=null;misSecure(false);m.a.push(0);save();sLose();$('ovc').querySelectorAll('[data-o]').forEach(x=>{x.disabled=true;if(x.dataset.o===it.a)x.classList.add('ok')});
       $('misMsg').innerHTML='<b style="color:var(--hot)">시간이 끝났어요. 정답은 '+it.a+'</b>';misNext(m,i,0)}},1000);
-  $('ovc').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{if(m.a.length>i)return;misStop();misCur=null;misSecure(false);const ok=b.dataset.o===it.a;m.a.push(ok?1:0);if(ok){P.coins+=MIS_LV[it.lv][1];sWin()}else{sLose();buzz(40)}save();
+  $('ovc').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{if(m.a.length>i)return;misStop();misCur=null;misSecure(false);const ok=b.dataset.o===it.a;m.a.push(ok?1:0);if(ok){P.coins+=MIS_LV[it.lv][1];qzAdd(it.lv);sWin()}else{sLose();buzz(40)}save();
     $('ovc').querySelectorAll('[data-o]').forEach(x=>{x.disabled=true;if(x.dataset.o===it.a)x.classList.add('ok');else if(x===b)x.classList.add('no')});
     $('misMsg').innerHTML=ok?misCheer(it.lv):'<b style="color:var(--hot)">아쉬워요. 정답은 '+it.a+'</b>';
     misNext(m,i,ok)})}
@@ -1148,8 +1160,8 @@ function misNext(m,i,ok){const x=$('misX');if(!x)return;if(ok&&i<MIS_N-1){x.text
     const y=document.createElement('button');y.className='btn wide';y.style.marginTop='8px';y.textContent='오늘은 여기까지';y.onclick=()=>{m.stop=1;save();misEnd()};x.after(y)}
   else{if(!ok){const g=$('misMsg');if(g)g.insertAdjacentHTML('beforeend','<br><span class="mut">오늘 도전은 여기까지예요</span>')}x.textContent='결과 보기';x.classList.add('pri');x.onclick=()=>misOpen(1)}}
 function misEnd(){const m=misState(),ok=m.a.reduce((x,y)=>x+y,0),all=ok===MIS_N;if(!m.fin){m.fin=1;const yk=misKey(-1);
-    m.n=m.last===yk?(m.n||0)+1:1;m.last=m.d;m.best=Math.max(m.best||0,m.n);if(all)P.coins+=MIS_ALL;recAdd('mis',{ok,st:misStars(m)});save();if(ok)sBig()}
-  modal('<h2>오늘의 미션 '+(all?'완벽해요!':'완료')+'</h2><div class="kv">'+MIS_IQ.map((_,i)=>{const x=m.a[i];return '<span>'+lvTag(i)+'</span><b style="color:'+(x?'var(--ok)':x===0?'var(--hot)':'var(--mute)')+'">'+(x?'정답 ★'+MIS_LV[i][1]:x===0?'오답':'도전 안 함')+'</b>'}).join('')+(all?'<span>IQ 140 완주 보너스</span><b>★'+MIS_ALL+'</b>':'')+'<span>얻은 별</span><b>★'+misStars(m)+'</b><span>연속 미션</span><b>'+m.n+'일</b></div>'+(m.a.some(x=>x)?'<p class="c" style="margin-top:10px;font-size:18px">🎉 오늘 <b style="color:var(--iq,#8b5cf6)">IQ '+MIS_IQ[m.a.reduce((b,x,i)=>x?i:b,0)]+'</b> 문제를 풀었어요!</p>':'')+
+    m.n=m.last===yk?(m.n||0)+1:1;m.last=m.d;m.best=Math.max(m.best||0,m.n);if(all)P.coins+=MIS_ALL;qzCur().n++;recAdd('mis',{ok,st:misStars(m)});save();syncOnline();if(ok)sBig()}
+  modal('<h2>오늘의 미션 '+(all?'완벽해요!':'완료')+'</h2><div class="kv">'+MIS_IQ.map((_,i)=>{const x=m.a[i];return '<span>'+lvTag(i)+'</span><b style="color:'+(x?'var(--ok)':x===0?'var(--hot)':'var(--mute)')+'">'+(x?'정답 ★'+MIS_LV[i][1]:x===0?'오답':'도전 안 함')+'</b>'}).join('')+(all?'<span>IQ 140 완주 보너스</span><b>★'+MIS_ALL+'</b>':'')+'<span>얻은 별</span><b>★'+misStars(m)+'</b><span>이번 달 퀴즈 점수</span><b>'+qzCur().sc+'점</b><span>연속 미션</span><b>'+m.n+'일</b></div>'+(m.a.some(x=>x)?'<p class="c" style="margin-top:10px;font-size:18px">🎉 오늘 <b style="color:var(--iq,#8b5cf6)">IQ '+MIS_IQ[m.a.reduce((b,x,i)=>x?i:b,0)]+'</b> 문제를 풀었어요!</p>':'')+
     '<div class="box c" style="margin-top:12px"><p class="mut">내일의 IQ 140 초고난도</p><p style="font-family:var(--fd);font-size:20px">🔮 '+misTomorrow()+'</p><p class="mut">내일 새 문제가 기다려요!</p></div><button class="btn pri wide" id="misOk" style="margin-top:10px">확인</button>');
   $('misOk').onclick=()=>{_cmMis();try{renderDay()}catch(e){}}}
 setTimeout(()=>misSecure(false),300);
@@ -1205,7 +1217,7 @@ function renderPlay(){try{seasonRoll()}catch(e){}
   $('rankRt').innerHTML=TIERS[tierOf(P.rp)][0]+'<br><span class="mut">'+P.rp+' RP</span>';
   $('frRt').innerHTML=P.fr&&(P.fr.w+P.fr.l+(P.fr.d||0))?emblem(tierOf(P.rp),26)+'<br>'+TIERS[tierOf(P.rp)][0]:'';
 }
-function renderDay(){try{const m=misState(),dn=misOver(m);$('misCard').innerHTML='<span class="mi">🎯</span><span class="mt"><b>오늘의 미션 · IQ 퀴즈</b><small>'+(dn?'★'+misStars(m)+' 얻음 · 연속 '+m.n+'일 · 내일 🔮 '+misTomorrow():m.a.length?('IQ '+MIS_IQ[m.a.length-1]+' 통과 · IQ '+MIS_IQ[m.a.length]+' 도전하기'):'IQ 90 → 100 → 120 → 130 → 140')+'</small></span><span class="mr">'+(dn?'완료':'풀기 ›')+'</span>';$('misCard').classList.toggle('dn',dn);$('misCard').onclick=misOpen}catch(e){}
+function renderDay(){try{const m=misState(),dn=misOver(m);$('misCard').innerHTML='<span class="mi">🎯</span><span class="mt"><b>오늘의 미션 · IQ 퀴즈</b><small>'+(dn?'★'+misStars(m)+' 얻음 · 연속 '+m.n+'일 · 내일 🔮 '+misTomorrow():m.a.length?('IQ '+MIS_IQ[m.a.length-1]+' 통과 · IQ '+MIS_IQ[m.a.length]+' 도전하기'):'IQ 90 → 100 → 120 → 130 → 140')+'</small>'+qzLine()+'</span><span class="mr">'+(dn?'완료':'풀기 ›')+'</span>';$('misCard').classList.toggle('dn',dn);$('misCard').onclick=misOpen}catch(e){}
   const k=todayKey();$('dStreak').textContent=P.streak.last===k||isYesterday(P.streak.last)?P.streak.n:0;$('dToday').textContent=P.day[k]||'-';
   $('dBest').textContent=Math.max(0,...Object.values(P.day));
   $('mDay').textContent=P.day[k]?'오늘의 러시 다시 하기':'오늘의 러시 시작';
@@ -1216,29 +1228,31 @@ function renderDay(){try{const m=misState(),dn=misOver(m);$('misCard').innerHTML
 }
 function isYesterday(k){const y=new Date();y.setDate(y.getDate()-1);return k===y.getFullYear()+'-'+String(y.getMonth()+1).padStart(2,'0')+'-'+String(y.getDate()).padStart(2,'0')}
 let rkMode='S';
-$('rkS').onclick=()=>{rkMode='S';renderRank()};$('rkR').onclick=()=>{rkMode='R';renderRank()};
+$('rkS').onclick=()=>{rkMode='S';renderRank()};$('rkQ').onclick=()=>{rkMode='Q';renderRank()};$('rkR').onclick=()=>{rkMode='R';renderRank()};
 async function tierModal(){modal('<h2>한판 승부 등급</h2><p class="mut c">이기면 +20점 안팎, 지면 −12점 안팎이에요. 나보다 높은 상대를 이기면 더 많이 올라요. 같은 상대와는 하루 3판까지만 점수가 반영돼요.</p>'+TIERS.map((t,i)=>'<div class="lr rr'+(i===tierOf(P.rp)?' me':'')+'"><span></span>'+emblem(i,30)+'<span class="nm">'+t[0]+'</span><span class="v">'+t[1]+'점~</span></div>').join('')+'<button class="btn wide" id="tmOk" style="margin-top:10px">확인</button>');$('tmOk').onclick=closeModal}
 async function renderRank(){
-  $('rkS').classList.toggle('on',rkMode==='S');$('rkR').classList.toggle('on',rkMode==='R');
+  $('rkQ').classList.toggle('on',rkMode==='Q');$('rkS').classList.toggle('on',rkMode==='S');$('rkR').classList.toggle('on',rkMode==='R');
   const k=tierOf(P.rp),nx=TIERS[k+1];
   seasonRoll();const rs=P.rs,rn=rs.w+rs.d+rs.l,nd=new Date(Date.now()+9*3600e3),left=Math.ceil((Date.UTC(nd.getUTCFullYear(),nd.getUTCMonth()+1,1)-nd.getTime())/864e5);
   $('rkMe').innerHTML=rkMode==='R'?emblem(k)+'<div><p style="font-family:var(--fd);font-size:19px">'+TIERS[k][0]+' · '+P.rp+'점</p><p class="mut">'+ssName(rs.id)+' 시즌 · '+(rn?rs.w+'승 '+(rs.d?rs.d+'무 ':'')+rs.l+'패 · '+Math.round((rs.w+rs.d/2)*100/rn)+'%':'아직 0판')+'<br>'+(nx?nx[0]+'까지 '+(nx[1]-P.rp)+'점':'최고 등급')+' · 새 시즌 '+left+'일 뒤</p>'+ssHistHtml(4)+'</div><button class="btn sm" id="rkTi">등급표</button>'
     :'<div><p style="font-family:var(--fd);font-size:19px">이번 시즌 '+(P.ss.id===monthKey()?P.ss.sc:0)+'점</p><p class="mut">한 달 동안 얻은 경험치 순위예요. 매달 1일에 새로 시작해요.</p></div>';
+  if(rkMode==='Q')$('rkMe').innerHTML='<div><p style="font-family:var(--fd);font-size:19px">👑 이번 달 퀴즈 '+qzCur().sc+'점</p><p class="mut">오늘의 미션 점수 순위예요. IQ 90 10점 · 100 20점 · 120 30점 · 130 50점 · 140 80점. 달이 끝날 때 1등이 퀴즈왕! 새 달까지 '+left+'일</p></div>';
   if($('rkTi'))$('rkTi').onclick=tierModal;
   const L=$('rkList');
   if(!ONLINE()){L.innerHTML='<div class="box"><p class="mut">순위표는 앱에서 볼 수 있어요. 시즌은 매달 1일에 새로 시작해요.</p></div>';return}
   L.innerHTML='<p class="mut c">불러오는 중…</p>';
   if(!(await net())){L.innerHTML='<p class="mut c">인터넷 연결을 확인해 주세요</p>';return}
   try{
-    const q=rkMode==='S'?await DB.collection('seasons/'+monthKey()+'/p').orderBy('sc').limit(500).get():await DB.collection('players').orderBy('rp').limit(500).get();
+    const q=rkMode!=='R'?await DB.collection('seasons/'+monthKey()+'/p').orderBy(rkMode==='Q'?'qz':'sc').limit(500).get():await DB.collection('players').orderBy('rp').limit(500).get();
     let rows=q.docs.map(d=>({id:d.id,...d.data()}));
-    const mk=monthKey();if(rkMode==='R')rows=rows.filter(r=>r.rs===mk&&(r.sw||0)+(r.sl||0)+(r.sd||0)>0).sort((a,b)=>(b.rp||0)-(a.rp||0));else rows.sort((a,b)=>(b.sc||0)-(a.sc||0));
+    const mk=monthKey();if(rkMode==='R')rows=rows.filter(r=>r.rs===mk&&(r.sw||0)+(r.sl||0)+(r.sd||0)>0).sort((a,b)=>(b.rp||0)-(a.rp||0));else if(rkMode==='Q')rows=rows.filter(r=>(r.qz||0)>0).sort((a,b)=>(b.qz||0)-(a.qz||0));else rows=rows.filter(r=>(r.sc||0)>0).sort((a,b)=>(b.sc||0)-(a.sc||0));
     const myI=rows.findIndex(r=>r.id===ME),all=rows.length;rows=rows.slice(0,100);
     const rec=r=>{const n=(r.sw||0)+(r.sl||0)+(r.sd||0);return (r.sw||0)+'승 '+(r.sd?r.sd+'무 ':'')+(r.sl||0)+'패 · '+Math.round(((r.sw||0)+(r.sd||0)/2)*100/n)+'%'};
-    const mine=rkMode==='R'?(P.rs.w+P.rs.d+P.rs.l>0):(P.ss.id===mk&&P.ss.sc>0);
-    const pin='<div class="lr me pin"><span class="k">나</span><span class="nm">내 순위 <b>'+(myI>=0?(myI+1)+'위':mine?(all>=500?'500위 밖':'곧 반영돼요'):'-')+'</b><small>'+(mine?(myI>=0?'전체 '+all+'명 중':''):(rkMode==='R'?'이번 시즌 한판 승부를 하면 올라가요':'이번 달에 한 판 하면 올라가요'))+'</small></span><span class="v">'+(rkMode==='R'?P.rp+'점':(P.ss.id===mk?P.ss.sc:0)+'점')+'</span></div>';
+    const mine=rkMode==='R'?(P.rs.w+P.rs.d+P.rs.l>0):rkMode==='Q'?qzCur().sc>0:(P.ss.id===mk&&P.ss.sc>0);
+    const pin='<div class="lr me pin"><span class="k">나</span><span class="nm">내 순위 <b>'+(myI>=0?(myI+1)+'위':mine?(all>=500?'500위 밖':'곧 반영돼요'):'-')+'</b><small>'+(mine?(myI>=0?'전체 '+all+'명 중':''):(rkMode==='R'?'이번 시즌 한판 승부를 하면 올라가요':rkMode==='Q'?'오늘의 미션을 맞히면 올라가요':'이번 달에 한 판 하면 올라가요'))+'</small></span><span class="v">'+(rkMode==='R'?P.rp+'점':rkMode==='Q'?qzCur().sc+'점':(P.ss.id===mk?P.ss.sc:0)+'점')+'</span></div>';
     L.innerHTML=rows.length?rows.map((r,i)=>rkMode==='R'?'<div class="lr rr'+(r.id===ME?' me':'')+'"><span class="k">'+(i+1)+'</span>'+emblem(tierOf(r.rp||0),30)+'<span class="nm">'+esc(r.nick||r.n||'?')+'<small class="rc">'+TIERS[tierOf(r.rp||0)][0]+' · '+rec(r)+'</small></span><span class="v">'+(r.rp||0)+'점</span></div>'
-      :'<div class="lr'+(r.id===ME?' me':'')+'"><span class="k">'+(i+1)+'</span><span class="nm">'+esc(r.n||r.nick||'?')+'<small>'+(r.lv?'Lv '+r.lv:'')+'</small></span><span class="v">'+(r.sc||0)+'점</span></div>').join(''):'<p class="mut c">'+(rkMode==='R'?'아직 한판 승부 기록이 없어요. 친구를 초대해 첫 판을 해 보세요!':'아직 기록이 없어요. 첫 번째가 되어 보세요!')+'</p>';
+      :rkMode==='Q'?'<div class="lr'+(r.id===ME?' me':'')+'"><span class="k">'+(i===0?'👑':i+1)+'</span><span class="nm">'+esc(r.n||r.nick||'?')+'<small>'+(r.qn?'미션 '+r.qn+'일':'')+'</small></span><span class="v">'+(r.qz||0)+'점</span></div>'
+      :'<div class="lr'+(r.id===ME?' me':'')+'"><span class="k">'+(i+1)+'</span><span class="nm">'+esc(r.n||r.nick||'?')+'<small>'+(r.lv?'Lv '+r.lv:'')+'</small></span><span class="v">'+(r.sc||0)+'점</span></div>').join(''):'<p class="mut c">'+(rkMode==='R'?'아직 한판 승부 기록이 없어요. 친구를 초대해 첫 판을 해 보세요!':rkMode==='Q'?'이번 달 퀴즈왕에 처음 도전해 보세요!':'아직 기록이 없어요. 첫 번째가 되어 보세요!')+'</p>';
     L.innerHTML+=(all>100?'<p class="mut c" style="font-size:12.5px">상위 100명까지 보여요</p>':'')+pin;
   }catch(e){L.innerHTML='<p class="mut c">순위표를 불러오지 못했어요</p>'}
 }
@@ -1249,6 +1263,7 @@ function meRecHtml(){
     +row('vs','👑','#7ee0f9','도전! 별셈왕',vw+'승 '+vl+'패 · 이긴 봇 '+P.beaten+'/5',P.beaten?AIS[P.beaten-1].bot:'-')
     +row('inf','∞','#ff8f8f','무한 러시','최고 점수 · '+((R.inf||[]).length)+'판 기록',P.best||'-')
     +row('iq','IQ','#c9a7ff','IQ 도전','최고 IQ · '+((R.iq||[]).length)+'번 기록',P.iq||'-')
+    +row('qz','👑','#ffe08a','오늘의 미션 · 퀴즈왕','이번 달 '+qzCur().sc+'점'+((P.qzKing||[]).length?' · 퀴즈왕 '+P.qzKing.map(ssName).join(', '):''),(P.qzKing||[]).length?'👑 '+P.qzKing.length+'번':'-')
     +row('fr',emblem(tierOf(P.rp),26),'transparent','한판 승부',(P.fr?frRec()+' · 승률 '+frRate()+'%':'아직 기록 없어요'),TIERS[tierOf(P.rp)][0]);
 }
 function recModal(id){const R=(P.recs||{})[id]||[],d=t=>{const x=new Date(t);return (x.getMonth()+1)+'/'+x.getDate()+' '+String(x.getHours()).padStart(2,'0')+':'+String(x.getMinutes()).padStart(2,'0')};
@@ -1257,8 +1272,9 @@ function recModal(id){const R=(P.recs||{})[id]||[],d=t=>{const x=new Date(t);ret
   else if(id==='vs'){t='도전! 별셈왕';h=AIS.map((a,i)=>kv(a.nm+' · '+a.bot,vsRec(i))).join('')+(R.length?'<span class="mut" style="grid-column:1/-1;margin-top:8px">최근 대결</span>'+R.slice(0,15).map(r=>kv(d(r.at)+' · '+AIS[r.k].bot,(r.w?'승 ':'패 ')+r.s)).join(''):'')}
   else if(id==='inf'){t='무한 러시';const a=R.slice(0,10),avg=a.length?Math.round(a.reduce((x,r)=>x+r.s,0)/a.length):0;h=kv('최고 점수',P.best||0)+kv('최근 10판 평균',avg||'-')+R.slice(0,20).map(r=>kv(d(r.at),r.s+'점 · '+r.st+'판')).join('')}
   else if(id==='iq'){t='IQ 도전';h=kv('최고 IQ',P.iq||'-')+R.slice(0,20).map(r=>kv(d(r.at),'IQ '+r.v+(r.ok!=null?' · '+r.ok+'/3판':''))).join('')}
+  else if(id==='qz'){t='오늘의 미션 · 퀴즈왕';const m=P.mis||{};h=kv('이번 달 퀴즈 점수',qzCur().sc+'점')+kv('이번 달 미션',qzCur().n+'일')+kv('연속 미션',(m.n||0)+'일 (최고 '+(m.best||0)+'일)')+kv('퀴즈왕 👑',(P.qzKing||[]).length?P.qzKing.map(ssName).join(', '):'아직 없어요')+R.slice(0,15).map(r=>kv(d(r.at),r.ok+'계단 · ★'+r.st)).join('')}
   else{t='한판 승부';const f=P.fr||{w:0,l:0,d:0,log:[]};h=kv('전체 전적',frRec())+kv('승률',frRate()+'%')+kv('지금 등급',TIERS[tierOf(P.rp)][0]+' · '+P.rp+'점')+(P.rsHist||[]).slice(0,12).map(s=>kv(ssName(s.id)+' 시즌','<span class="ssh">'+emblem(s.k,20)+'</span>'+TIERS[s.k][0]+' · '+s.w+'승 '+(s.d?s.d+'무 ':'')+s.l+'패')).join('')+(f.log||[]).slice(0,15).map(r=>kv(d(r.at)+' · '+esc(r.n),(r.w===1?'승 ':r.w===2?'무 ':'패 ')+r.s)).join('')}
-  modal('<h2>'+t+'</h2><p class="mut c">'+(id==='fr'?'시즌 순위는 랭킹 탭에서 봐요':'랭킹에는 안 올라가는 나만의 기록이에요')+'</p><div class="kv rk">'+(h||'<span class="mut">아직 기록이 없어요</span>')+'</div><button class="btn wide" id="rmOk" style="margin-top:12px">닫기</button>');$('rmOk').onclick=closeModal}
+  modal('<h2>'+t+'</h2><p class="mut c">'+(id==='fr'||id==='qz'?'순위는 랭킹 탭에서 봐요':'랭킹에는 안 올라가는 나만의 기록이에요')+'</p><div class="kv rk">'+(h||'<span class="mut">아직 기록이 없어요</span>')+'</div><button class="btn wide" id="rmOk" style="margin-top:12px">닫기</button>');$('rmOk').onclick=closeModal}
 function renderMe(){
   $('meProf').innerHTML=profHtml();$('meProf').classList.toggle('gold',adsRemoved());
   $('meStat').innerHTML='<div><b>'+P.games+'</b>판</div><div><b>'+P.wins+'</b>승리</div><div><b>'+P.solved+'</b>맞힌 문제</div>';
@@ -1908,7 +1924,7 @@ const _ab4=window.__appBack;window.__appBack=function(){if(CO&&$('ov').hidden){$
 applyTheme();show('home');tab('Play');kongShow();
 if(P.seen){homeLine();maybeAskNoti();setTimeout(misAuto,700)}else rushDemo();
 if(APP){notiSync();setTimeout(()=>{if(adsRemoved()&&!P.adsOff){P.adsOff=1;save()}},2000)}
-syncOnline();
+syncOnline();setTimeout(()=>{try{qzCheck()}catch(e){}},2500);
 </script>
 
 </body></html>
