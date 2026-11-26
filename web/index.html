@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="4.4"</script>
+<script>window.APP_VERSION="4.5"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -917,8 +917,15 @@ let DB=null,ME=null;
 async function net(){if(!ONLINE())return false;if(DB)return true;try{DB=await claude.use('db');ME=await (await claude.use('user')).id();return true}catch(e){DB=null;return false}}
 async function syncOnline(){try{seasonRoll()}catch(e){}
   if(!(await net()))return;
-  try{await DB.doc('players/'+ME).set({nick:P.nick.slice(0,12),rp:P.rp,lv:lvOf(P.xp).lv,fw:(P.fr&&P.fr.w)||0,fd:(P.fr&&P.fr.d)||0,fl:(P.fr&&P.fr.l)||0,rs:(P.rs&&P.rs.id)||'',sw:(P.rs&&P.rs.w)||0,sd:(P.rs&&P.rs.d)||0,sl:(P.rs&&P.rs.l)||0,at:Date.now()})}catch(e){}
-  try{const mk=monthKey(),sc=P.ss.id===mk?P.ss.sc:0,qz=(P.qz&&P.qz.id===mk)?P.qz.sc:0;if(sc>0||qz>0)await DB.doc('seasons/'+mk+'/p/'+ME).set({n:P.nick.slice(0,12),sc,qz,qn:(P.qz&&P.qz.id===mk)?P.qz.n:0,k:tierOf(P.rp),lv:lvOf(P.xp).lv,at:Date.now()})}catch(e){}
+  /* 4.5 (젠다): 서버 규칙(무료)에 맞춰 올리기. 한 번에 랭크 +60점까지, 퀴즈 점수는 하루 한 번 190점까지 */
+  const sv=async p=>{try{const g=await DB.doc(p).get();return g&&g.exists?g.data():null}catch(e){return null}};
+  try{const o=await sv('players/'+ME);let rp=P.rp;if(o&&typeof o.rp==='number'){if(rp>o.rp+60)rp=o.rp+60}else rp=Math.min(rp,3000);
+    await DB.doc('players/'+ME).set({nick:P.nick.slice(0,12),rp,lv:lvOf(P.xp).lv,fw:(P.fr&&P.fr.w)||0,fd:(P.fr&&P.fr.d)||0,fl:(P.fr&&P.fr.l)||0,rs:(P.rs&&P.rs.id)||'',sw:(P.rs&&P.rs.w)||0,sd:(P.rs&&P.rs.d)||0,sl:(P.rs&&P.rs.l)||0,at:Date.now()})}catch(e){}
+  try{const mk=monthKey(),sc=P.ss.id===mk?P.ss.sc:0,lq=(P.qz&&P.qz.id===mk)?P.qz.sc:0;if(sc>0||lq>0){const p='seasons/'+mk+'/p/'+ME,o=await sv(p),td=Math.floor((Date.now()+9*3600e3)/864e5);
+    const d={n:P.nick.slice(0,12),sc,qn:Math.min(31,(P.qz&&P.qz.id===mk)?P.qz.n:0),k:tierOf(P.rp),lv:lvOf(P.xp).lv,at:Date.now()};
+    if(o&&typeof o.qz==='number'){const od=typeof o.qdn==='number'?o.qdn:null;if(lq>o.qz&&(od==null||td>od)){d.qz=o.qz+Math.min(lq-o.qz,190*(od==null?1:td-od));d.qdn=td}else{d.qz=o.qz;if(od!=null)d.qdn=od}}
+    else{d.qz=Math.min(lq,190);if(d.qz>0)d.qdn=td}
+    await DB.doc(p).set(d)}}catch(e){}
 }
 
 /* ---- live match (ranked + friend). Host decides every round, guest claims. ---- */
