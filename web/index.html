@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="4.2"</script>
+<script>window.APP_VERSION="4.3"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -1112,7 +1112,7 @@ function misKey(off){const t=new Date();t.setDate(t.getDate()+off);return t.getF
 function misTomorrow(){return MIS_T[misTypes(misKey(1))[4]]}
 function lvTag(lv){return '<span class="lvt l'+lv+'">'+'★'.repeat(lv+1)+'☆'.repeat(4-lv)+' '+MIS_LV[lv][0]+'</span>'}
 /* 4.0 (젠다): 문제를 보는 중에 앱을 나가거나 창을 닫으면 그 문제는 오답, 휴대폰에서는 화면 캡처도 막아요 */
-let misCur=null,misT=0;const MIS_SEC=[60,60,120,180,240];
+let misCur=null,misT=0;const MIS_SEC=[60,60,120,180,300];
 function misStop(){clearInterval(misT);misT=0}
 /* 4.0 (젠다): 휴대폰에서 앱 전체 화면 캡처 막기. 시험용 APK에서는 캡처 허용 (젠다: 테스트할 땐 풀어야지) */
 function misSecure(on){try{window.AndroidApp&&AndroidApp.secure&&AndroidApp.secure(!TEST_UNLOCK_ALL)}catch(e){}}
