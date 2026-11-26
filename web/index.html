@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="3.7"</script>
+<script>window.APP_VERSION="3.8"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -401,7 +401,7 @@ html[data-th=sea]{--ink:#06222e;--panel:#0c3140;--panel2:#124556;--line:#1d5d70;
     <div class="side r"><span class="nm" id="opNm">AI</span><div class="pips" id="pipOp"></div></div>
     <div class="fuse fa" id="fuse"><i id="fuseI"></i></div>
   </div>
-  <div class="tgt"><div class="sum" id="sumBox"><span class="lbl">합계</span><b id="sumV">0</b></div><div class="goal"><span class="lbl">목표<i class="dif" id="dif"></i></span><span class="tv" id="tgt"></span><span class="ways" id="ways"></span></div><span class="cb" id="combo">콤보 x2</span></div>
+  <div class="tgt"><div class="sum" id="sumBox"><span class="lbl">합계</span><b id="sumV">0</b></div><div class="goal"><span class="lbl">목표<i class="dif" id="dif"></i></span><span class="tv" id="tgt"></span><span class="ways" id="ways"></span></div><span class="cb" id="combo" hidden></span></div>
   <div class="bwrap" id="bwrap"><div class="board" id="board"></div><svg class="pl" id="pl"></svg></div>
   <div class="expr" id="expr"></div>
   <div class="ctl"><button class="btn" id="bHint" hidden>💡 힌트</button><button class="btn" id="bClear">지우기</button><button class="btn" id="bSkip" hidden>이 판 넘기기</button></div>
@@ -674,7 +674,7 @@ function solved(idx){
   G.lastAt=now;G.lastFrac=frac;if(G.fr)G.fr.push(frac);
   const nums=(path.length+1)/2;
   G.combo++;G.best=Math.max(G.best,G.combo);G.solved++;
-  const mult=Math.min(3,1+.2*(G.combo-1));
+  const mult=1;/* 3.8 (젠다): 콤보 없앰 */
   const pts=Math.round((100+40*(nums-2))*(.5+.5*frac)*mult);
   G.score+=pts;
   sWin();buzz(20);
@@ -683,8 +683,8 @@ function solved(idx){
   if(G.mode==='tut'){t.who='me';G.live=false;clearT();renderHud();T.nx=setTimeout(tutDone,900);return}
   if(G.mode==='live'){G.pend=G.pend||{};G.pend[G.stage+'.'+idx]=pts;t.who='wait';renderHud();renderPath();if(G.host)liveDecide(idx,'H');else liveClaim(idx);return}
   t.who='me';
-  toast('+'+pts,'var(--num)',G.combo>1?'콤보 x'+G.combo:'');
-  if(G.mode==='vs'){G.me++;if(G.combo%3===0)aiFreeze();
+  toast('+'+pts,'var(--num)','');
+  if(G.mode==='vs'){G.me++;
     if(G.me>=G.goal){G.live=false;clearT();freezeFuse();renderHud();renderPath();T.nx=setTimeout(()=>finish(true),1000);return}}
   renderHud();renderPath();
   if(!openT().length)boardDone();
@@ -783,7 +783,7 @@ function renderHud(){
     $('pipOp').innerHTML=Array.from({length:goal},(_,k)=>'<i class="'+(k<G.op?'op':'')+'"></i>').join('')}
   if(G.pz){const ds=G.pz.star||(m==='vs'?G.lv+1:m==='step'?G.lv+1:0);$('dif').textContent=ds?'★'.repeat(ds)+'☆'.repeat(5-ds):'';$('tgt').textContent=G.pz.v;const n=G.pz.T.length;$('ways').innerHTML=n>1?G.pz.T.map(t=>'<i class="'+(t.who||'')+'"></i>').join('')+'<small>'+G.pz.T.filter(t=>t.who==='me').length+'/'+n+'</small>':''}
   $('bSkip').hidden=m!=='iq';$('bHint').hidden=m!=='iq'&&m!=='step';if(m==='iq')$('bHint').textContent=G.hints>0?'💡 힌트 '+G.hints:'💡 힌트 ★'+IQH_PRICE;if(m==='step')$('bHint').textContent='💡 힌트';
-  const cb=$('combo');cb.textContent='콤보 x'+G.combo;cb.classList.toggle('on',G.combo>1);
+  $('combo').classList.remove('on');
 }
 function toast(t,col,sub,sm){const el=$('toast');el.className='toast'+(sm?' sm':'');el.innerHTML=t+(sub?'<small>'+sub+'</small>':'');el.style.color=col;void el.offsetWidth;el.classList.add('go')}
 function note(t){toast(t,'var(--fg)','',1)}
@@ -822,18 +822,18 @@ function finish(win){
     vsb();if(win){xp+=40+G.lv*20;P.wins++;if(P.beaten<G.lv+1)P.beaten=G.lv+1}
     vsb()[G.lv][win?0:1]++;recAdd('vs',{k:G.lv,w:win?1:0,s:G.me+':'+G.op});
     head=win?'승리!':'아쉬워요';
-    lines=[['점수',G.score],['찾은 길',G.me+' : '+G.op],['최고 콤보',G.best],[AIS[G.lv].bot+' 전적',vsRec(G.lv)]];
+    lines=[['점수',G.score],['찾은 길',G.me+' : '+G.op],[AIS[G.lv].bot+' 전적',vsRec(G.lv)]];
     if(win&&G.lv<4)extraBtn='<button class="btn pri" id="rNext">다음 AI: '+AIS[G.lv+1].nm+'</button>';
   }else if(G.mode==='inf'){
     const nb=G.score>P.best;if(nb)P.best=G.score;recAdd('inf',{s:G.score,st:G.stage});
     head=nb?'새 기록!':'러시 끝';
-    lines=[['점수',G.score],['버틴 판',G.stage],['찾은 길',G.solved],['최고 콤보',G.best],['내 최고',P.best]];
+    lines=[['점수',G.score],['버틴 판',G.stage],['찾은 길',G.solved],['내 최고',P.best]];
   }else if(G.mode==='day'){
     const prev=P.day[G.key]||0,first=!P.day[G.key];if(G.score>prev)P.day[G.key]=Math.max(G.score,1);
     if(first){const y=new Date();y.setDate(y.getDate()-1);const yk=y.getFullYear()+'-'+String(y.getMonth()+1).padStart(2,'0')+'-'+String(y.getDate()).padStart(2,'0');
       P.streak={last:G.key,n:P.streak.last===yk?P.streak.n+1:1};xp+=30}
     head='오늘의 러시 완료';
-    lines=[['점수',G.score],['찾은 길',G.solved+' / '+G.total*K_PER],['최고 콤보',G.best],['연속 출석',P.streak.n+'일']];
+    lines=[['점수',G.score],['찾은 길',G.solved+' / '+G.total*K_PER],['연속 출석',P.streak.n+'일']];
   }else if(G.mode==='live'){
     head=G.draw?'무승부':win?'승리!':'아쉬워요';P.wins+=win?1:0;
     lines=[[G.lk===1?'이긴 판':'찾은 길',G.me+' : '+G.op],['점수',G.score]];
@@ -855,7 +855,7 @@ function finish(win){
     /* 1.3: 계산 판 12목표(60%) + 별자리 퍼즐 2판(40%) → 70~150 */
     G.iq=iqRush();const nb=G.iq>(P.iq||0);if(nb)P.iq=G.iq;recAdd('iq',{v:G.iq,ok:(G.res||[]).filter(r=>r.ok).length});xp+=20;
     head=nb&&P.games>0?'IQ 도전 · 새 기록!':'IQ 도전 결과';
-    lines=[['찾은 길',G.solved+' / '+G.total*K_PER],['평균 속도',Math.round(avg*100)+'%'],['최고 콤보',G.best],['내 최고 IQ',P.iq]];
+    lines=[['찾은 길',G.solved+' / '+G.total*K_PER],['평균 속도',Math.round(avg*100)+'%'],['내 최고 IQ',P.iq]];
   }
   addXp(xp);save();syncOnline();notiSync();
   const after=lvOf(P.xp);
@@ -1169,7 +1169,7 @@ function rules(){
   '<p class="c" style="font-family:var(--fd);font-size:18px">4 + 3 = 7 → 7 × 2 = <span style="color:var(--num)">14</span></p>'+
   '<p>계산은 <b>앞에서부터 차례로</b> 해요 (계산기처럼). ÷는 나누어떨어질 때만 돼요. 한 칸은 한 번만 지나가요.</p>'+
   '<p>끌어서 그려도 되고 톡톡 눌러도 돼요. 마지막 칸을 다시 누르면 한 칸 지워져요. 목표가 되는 순간 바로 정답!</p>'+
-  '<p class="mut">목표는 늘 판 위에서 실제로 만들 수 있는 숫자예요. 빨리, 길게, 연속으로(콤보) 맞힐수록 점수가 커요. AI도 같은 판에서 길을 하나씩 가져가요. 3연속 콤보면 AI가 3초 얼어요.</p>'+
+  '<p class="mut">목표는 늘 판 위에서 실제로 만들 수 있는 숫자예요. 빨리, 길게 맞힐수록 점수가 커요. AI도 같은 판에서 길을 하나씩 가져가요.</p>'+
   '<div class="row"><button class="btn pri" id="rOk">알겠어요</button></div>');
   $('rOk').onclick=closeModal;
 }
@@ -1292,10 +1292,10 @@ function kongFace(ex){kongEx=ex;document.querySelectorAll('.kong-f').forEach(f=>
 
 /* 말: 'face|text'. 같은 말은 한 바퀴 돌기 전엔 다시 안 해요 (별잇기 셔플 주머니 방식) */
 const KL={
-  hi:['happy|어서 와요, {nick}님! 오늘도 머리 좀 풀어 볼까요?','excited|왔다! 오늘은 몇 콤보까지 갈 수 있을까요?','smile|반가워요! 손가락 준비운동 됐어요?','wink|오늘 뇌 컨디션 어때요? 저는 반짝반짝해요'],
+  hi:['happy|어서 와요, {nick}님! 오늘도 머리 좀 풀어 볼까요?','excited|왔다! 오늘은 길을 몇 개나 찾을까요?','smile|반가워요! 손가락 준비운동 됐어요?','wink|오늘 뇌 컨디션 어때요? 저는 반짝반짝해요'],
   back:['love|보고 싶었어요! 며칠 동안 계산 연습 혼자 했다고요','excited|돌아왔네요! 오늘의 러시부터 같이 해요'],
   day:['excited|오늘의 러시 아직이에요! 모두 같은 판 4개, 오늘은 몇 점?','smile|하루 한 판 오늘의 러시! {streak}일 연속 이어 가요'],
-  ai:['think|{bot} 아직 못 이겼죠? 3연속 콤보면 AI가 3초 얼어요!','wink|{bot}이 기다리고 있어요. 한 판 붙어 볼까요?'],
+  ai:['think|{bot} 아직 못 이겼죠? 짧은 길부터 빨리 찾아 봐요!','wink|{bot}이 기다리고 있어요. 한 판 붙어 볼까요?'],
   rank:['proud|지금 {tier} {rp} RP! {left} RP만 더 모으면 {next}이에요','smile|랭크전 {wins}판만 이기면 {next} 승급이에요'],
   inf:['think|무한 러시 최고 {best}점! 오늘 넘어 볼까요?'],
   tap:['smile|빨리 찾는 비법? 큰 목표는 × 부터 찾아보세요','think|목표가 작으면 − 나 ÷ 가 숨어 있을 때가 많아요','wink|길게 이을수록 점수가 커요. 숫자 4개면 보너스!','happy|계산은 앞에서부터 차례로! 계산기처럼요','surprise|알고 있었어요? 마지막 칸을 다시 누르면 한 칸 지워져요','proud|저 사실 구구단 다 외워요. 별이라서요','sleepy|하암… 저 깨우려면 한 판 해 주세요','love|{nick}님이랑 노는 게 제일 좋아요'],
@@ -1340,7 +1340,7 @@ const _solved=solved;solved=function(){const m=G.mode;const r=_solved.apply(this
   if(!G||m==='tut'||G.done)return r;
   if(m==='live'){kongFace('happy');return r}
   const frac=G.lastFrac||0;
-  if(m==='vs'&&G.combo%3===0)say('freeze');else if(G.combo>=3)say('combo',{c:G.combo});else if(frac>.7)say('fast');else say('solve');return r};
+  if(frac>.7)say('fast');else say('solve');return r};
 const _aiClaim=aiClaim;aiClaim=function(){const op=G&&G.op;const r=_aiClaim.apply(this,arguments);if(G&&G.op>op&&!G.done)say('opScore');return r};
 const _timeUp=timeUp;timeUp=function(){const m=G&&G.mode;const r=_timeUp.apply(this,arguments);
   if(G&&m!=='live'&&!G.live)say('timeout');return r};
@@ -1719,7 +1719,7 @@ function rushDemo(replay){
     {t:'숫자에서 시작해 <b>옆 칸(위·아래·왼쪽·오른쪽)</b>으로 이어 그려요. 왼쪽 위 <b>합계</b>에 지금 값이 크게 나와요. <b>4 + 3</b> = 7!',ex:'think',spot:'sumBox',run:()=>{reset();draw(tA.sol.slice(0,3),0,600)}},
     {t:'계산은 <b>앞에서부터 차례로</b>, 계산기처럼요. 이어서 <b>× 2</b> 하면 7 × 2 = <b style="color:var(--num)">14</b>. 합계가 목표가 되는 순간 정답이에요!',ex:'proud',spot:'sumBox',run:()=>{reset();path=tA.sol.slice(0,3);renderPath();draw(tA.sol,3,600,()=>got(tA))}},
     {t:'같은 14를 <b>다른 길</b>로도 만들어요. 이번엔 <b>'+ex(tB.sol)+'</b>! 이미 찾은 길은 다시 안 되고, ÷는 나누어떨어질 때만 돼요.',ex:'wink',spot:'ways',run:()=>{reset([[tA,'me']]);draw(tB.sol,0,550,()=>got(tB))}},
-    {t:'도전! 별셈왕·한판 승부에서는 <b style="color:var(--hot)">상대도 같은 판</b>에서 길을 찾아요. 빨간 길은 상대가 먼저 찾은 길이에요. <b>5점</b> 먼저 내면 승리! 빨리, 연속으로(콤보) 찾을수록 점수가 커요.',ex:'surprise',spot:'ways',run:()=>{reset([[tA,'me'],[tB,'me']]);coAt(500,()=>{tC.who='op';tC.key=keyOf(tC.sol);sLose();renderHud();flashOp(tC.sol);toast('상대 득점','var(--hot)')})}},
+    {t:'도전! 별셈왕·한판 승부에서는 <b style="color:var(--hot)">상대도 같은 판</b>에서 길을 찾아요. 빨간 길은 상대가 먼저 찾은 길이에요. <b>5점</b> 먼저 내면 승리! 빨리 찾을수록 점수가 커요.',ex:'surprise',spot:'ways',run:()=>{reset([[tA,'me'],[tB,'me']]);coAt(500,()=>{tC.who='op';tC.key=keyOf(tC.sol);sLose();renderHud();flashOp(tC.sol);toast('상대 득점','var(--hot)')})}},
     {t:'이제 직접 해 보세요! <b>4</b>에서 시작해 <b>+ 3 × 2</b>로 <b style="color:var(--num)">14</b>를 만들어요.',ex:'excited',btn:'직접 해 보기',run:()=>reset([[tA,'me'],[tB,'me'],[tC,'op']])}
   ],()=>{startTut()},()=>{if(replay){goHome();return}P.seen=1;save();goHome()});
 }
