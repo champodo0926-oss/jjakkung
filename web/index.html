@@ -9,7 +9,7 @@ html,body{margin:0}
 </style>
 <script src="firebase-config.js"></script>
 <script src="online.js"></script>
-<script>window.APP_VERSION="4.5"</script>
+<script>window.APP_VERSION="4.6"</script>
 </head><body>
 <style>
 /* Layout: one-screen app. Home = tab pages (플레이/오늘/랭킹/내 정보) over a fixed tab bar; game = versus strip, target, board, expression. Single dark look by choice. */
@@ -1932,6 +1932,14 @@ applyTheme();show('home');tab('Play');kongShow();
 if(P.seen){homeLine();maybeAskNoti();setTimeout(misAuto,700)}else rushDemo();
 if(APP){notiSync();setTimeout(()=>{if(adsRemoved()&&!P.adsOff){P.adsOff=1;save()}},2000)}
 syncOnline();setTimeout(()=>{try{qzCheck()}catch(e){}},2500);
+/* 4.6 (젠다): 10분 동안 아무것도 안 하면 저장하고 앱을 닫아요 (발열·배터리). 타이머는 한 개만, 손댈 때 10초에 한 번만 다시 맞춰요 */
+const IDLE_MS=600000;let idleT=0,idleAt=0,hidAt=0;
+function idleFire(){try{save()}catch(e){}try{if(window.AndroidApp&&AndroidApp.exitApp){AndroidApp.exitApp();return}}catch(e){}
+  try{if(typeof ROOM!=='undefined'&&ROOM)return idleArm(true)}catch(e){}try{closeModal()}catch(e){}try{goHome()}catch(e){}setTimeout(()=>note('오래 쉬어서 홈으로 돌아왔어요'),300)}
+function idleArm(force){const t=Date.now();if(!force&&t-idleAt<10000)return;idleAt=t;clearTimeout(idleT);idleT=setTimeout(idleFire,IDLE_MS)}
+['pointerdown','keydown'].forEach(e=>document.addEventListener(e,()=>idleArm(),{passive:true,capture:true}));
+document.addEventListener('visibilitychange',()=>{if(document.hidden){hidAt=Date.now();clearTimeout(idleT)}else{if(hidAt&&Date.now()-hidAt>IDLE_MS){try{save()}catch(e){}location.reload();return}idleArm(true)}});
+idleArm(true);
 </script>
 
 </body></html>
